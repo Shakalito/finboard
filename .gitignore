@@ -1,0 +1,5 @@
+# by docker-compose
+pgdata/
+
+# secret secret
+.env
