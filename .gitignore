@@ -1,5 +1,48 @@
-# by docker-compose
+# PostgreSQL
 pgdata/
 
 # secret secret
 .env
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# JetBrains (PyCharm, WebStorm, IntelliJ)
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
