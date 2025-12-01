@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from .common.db import SessionLocal
 from .auth_service.router import router as auth_router
+from .refdata_service.router import router as refdata_router
 
 app = FastAPI(title="Finboard API")
 
@@ -22,3 +23,4 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "db": result}
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(refdata_router, prefix="/refdata", tags=["refdata"])
