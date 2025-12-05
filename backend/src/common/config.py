@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 
+    finnhub_api_key: str
+    finnhub_base_url: str = "https://finnhub.io/api/v1"
+
     model_config = SettingsConfigDict(
         env_file="../.env",
         env_file_encoding="utf-8",
