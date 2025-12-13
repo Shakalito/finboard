@@ -1,8 +1,7 @@
 from sqlalchemy import Column, String, DateTime, Numeric, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import text
 
-from ..common.db import Base
+from ..common.db import Base, TimeframeType
 
 
 class Ohlcv(Base):
@@ -11,7 +10,7 @@ class Ohlcv(Base):
 
     instrument_id = Column(UUID(as_uuid=True), ForeignKey("refdata.instruments.id"), primary_key=True)
     venue_id = Column(UUID(as_uuid=True), ForeignKey("refdata.venues.id"), primary_key=True)
-    tf = Column(String, primary_key=True)  # enum timeframe in DB, string here
+    tf = Column(TimeframeType, primary_key=True)  # enum timeframe in DB, string here
     ts = Column(DateTime(timezone=True), primary_key=True)  # UTC
 
     open = Column(Numeric(18, 8), nullable=False)

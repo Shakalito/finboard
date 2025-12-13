@@ -3,14 +3,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, delete, cast, String
-from httpx import HTTPStatusError
+from sqlalchemy import select
 
 from ..common.db import SessionLocal
 from ..refdata_service.db_models import Listing, Instrument, Venue
 from .db_models import Ohlcv
-from .schemas import OhlcvPoint, OhlcvResponse
-from .external_client import FinnhubClient
+from .schemas import OhlcvPoint, OhlcvResponse, QuoteResponse, FinnhubQuoteRaw
+from .external_finnhub import FinnhubClient
 
 router = APIRouter()
 
@@ -35,10 +34,9 @@ def get_listing_with_joins(db: Session, listing_id: UUID):
 
 
 
-@router.post("/sync/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
-def sync_ohlcv_for_listing(
-    listing_id: UUID,
-    days_back: int = Query(default=365, ge=1, le=3650),
+@router.get("/quote", response_model=QuoteResponse)
+def get_quote(
+    listing_id: UUID = Query(..., description="ID from refdata.listings"),
     db: Session = Depends(get_db),
 ):
 
@@ -58,59 +56,31 @@ def sync_ohlcv_for_listing(
         )
 
     client = FinnhubClient()
-    try:
-        candles = client.fetch_ohlcv_daily(symbol=listing.ticker, days_back=days_back)
-    except HTTPStatusError as e:
-        print(f"FINNHUB ERROR STATUS: {e.response.status_code} - {e.response.reason_phrase}")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"External API error fetching OHLCV for {listing.ticker}. Status: {e.response.status_code} {e.response.reason_phrase}. Check API Key.",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Connection error to external API: {e}",
-        )
+    raw_data = client.fetch_quote(symbol=listing.ticker)
 
-    if not candles:
-        return
+    validated_data = FinnhubQuoteRaw.model_validate(raw_data)
 
-    if not candles:
-        return
+    return QuoteResponse(
+        listing_id=listing_id,
+        instrument_id=instrument.id,
+        venue_id=venue.id,
+        ticker=listing.ticker,
 
-    tf = "d1"
+        #py2
+        price=validated_data.c,
+        open=validated_data.o,
+        high=validated_data.h,
+        low=validated_data.l,
+        prev_close=validated_data.pc,
 
-    delete_stmt = (
-        delete(Ohlcv)
-        .where(
-            Ohlcv.instrument_id == instrument.id,
-            Ohlcv.venue_id == venue.id,
-            cast(Ohlcv.tf, String) == tf,
-        )
+        timestamp=FinnhubClient.parse_timestamp(validated_data.t),
     )
-    db.execute(delete_stmt)
 
-    for c in candles:
-        bar = Ohlcv(
-            instrument_id=instrument.id,
-            venue_id=venue.id,
-            tf=tf,
-            ts=c["ts"],
-            open=c["open"],
-            high=c["high"],
-            low=c["low"],
-            close=c["close"],
-            volume=c["volume"],
-        )
-        db.add(bar)
-
-    db.commit()
-    return
 
 
 @router.get("/ohlcv", response_model=OhlcvResponse)
 def get_ohlcv(
-    listing_id: UUID = Query(..., description="ID listingu z refdata.listings"),
+    listing_id: UUID = Query(..., description="Listing ID from refdata.listings"),
     timeframe: str = Query("d1"),
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
@@ -132,7 +102,7 @@ def get_ohlcv(
         .where(
             Ohlcv.instrument_id == instrument.id,
             Ohlcv.venue_id == venue.id,
-            cast(Ohlcv.tf, String) == timeframe,
+            Ohlcv.tf == timeframe,
         )
         .order_by(Ohlcv.ts.desc())
         .limit(limit)
@@ -144,7 +114,6 @@ def get_ohlcv(
         stmt = stmt.where(Ohlcv.ts <= date_to)
 
     rows = db.execute(stmt).scalars().all()
-
     rows = list(reversed(rows))
 
     points: list[OhlcvPoint] = []
