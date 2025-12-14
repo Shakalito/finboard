@@ -47,3 +47,10 @@ class FinnhubQuoteRaw(BaseModel):
         "populate_by_name": True,
         "from_attributes": True
     }
+
+class BatchQuotesRequest(BaseModel):
+    listing_ids: list[UUID] = Field(..., min_length=1, max_length=100)
+
+class BatchQuotesResponse(BaseModel):
+    results: dict[UUID, QuoteResponse | None]
+    errors: dict[UUID, str]

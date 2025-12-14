@@ -8,8 +8,10 @@ from sqlalchemy import select
 from ..common.db import SessionLocal
 from ..refdata_service.db_models import Listing, Instrument, Venue
 from .db_models import Ohlcv
-from .schemas import OhlcvPoint, OhlcvResponse, QuoteResponse, FinnhubQuoteRaw
+from .schemas import OhlcvPoint, OhlcvResponse, QuoteResponse, FinnhubQuoteRaw, BatchQuotesResponse, BatchQuotesRequest
 from .external_finnhub import FinnhubClient
+
+import httpx
 
 router = APIRouter()
 
@@ -136,3 +138,63 @@ def get_ohlcv(
         timeframe=timeframe,
         points=points,
     )
+
+
+@router.post("/quotes", response_model=BatchQuotesResponse)
+def get_quotes_batch(
+    payload: BatchQuotesRequest,
+    db: Session = Depends(get_db),
+):
+
+    stmt = (
+        select(Listing, Instrument, Venue)
+        .join(Instrument, Listing.instrument_id == Instrument.id)
+        .join(Venue, Listing.venue_id == Venue.id)
+        .where(Listing.id.in_(payload.listing_ids))
+    )
+    rows = db.execute(stmt).all()
+
+    by_id: dict[UUID, tuple[Listing, Instrument, Venue]] = {}
+    for listing, instrument, venue in rows:
+        by_id[listing.id] = (listing, instrument, venue)
+
+    results: dict[UUID, QuoteResponse | None] = {}
+    errors: dict[UUID, str] = {}
+
+    client = FinnhubClient()
+
+    for lid in payload.listing_ids:
+        if lid not in by_id:
+            results[lid] = None
+            errors[lid] = "Listing not found"
+
+    for lid, (listing, instrument, venue) in by_id.items():
+        if not listing.ticker:
+            results[lid] = None
+            errors[lid] = "Listing has no ticker configured"
+            continue
+
+        try:
+            raw = client.fetch_quote(symbol=listing.ticker)
+            validated = FinnhubQuoteRaw.model_validate(raw)
+
+            results[lid] = QuoteResponse(
+                listing_id=lid,
+                instrument_id=instrument.id,
+                venue_id=venue.id,
+                ticker=listing.ticker,
+                price=validated.c,
+                open=validated.o,
+                high=validated.h,
+                low=validated.l,
+                prev_close=validated.pc,
+                timestamp=FinnhubClient.parse_timestamp(validated.t),
+            )
+        except httpx.HTTPError as e:
+            results[lid] = None
+            errors[lid] = f"Finnhub HTTP error: {str(e)}"
+        except Exception as e:
+            results[lid] = None
+            errors[lid] = f"Quote error: {str(e)}"
+
+    return BatchQuotesResponse(results=results, errors=errors)
