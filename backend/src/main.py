@@ -8,6 +8,8 @@ from .refdata_service.router import router as refdata_router
 from .watchlist_service.router import router as watchlist_router
 from .marketdata_service.router import router as marketdata_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Finboard API")
 
 
@@ -28,3 +30,11 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(refdata_router, prefix="/refdata", tags=["refdata"])
 app.include_router(watchlist_router, prefix="/watchlist", tags=["watchlist"])
 app.include_router(marketdata_router, prefix="/marketdata", tags=["marketdata"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
