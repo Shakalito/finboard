@@ -6,6 +6,7 @@ from .common.db import SessionLocal
 from .auth_service.router import router as auth_router
 from .refdata_service.router import router as refdata_router
 from .watchlist_service.router import router as watchlist_router
+from .marketdata_service.router import router as marketdata_router
 
 app = FastAPI(title="Finboard API")
 
@@ -26,3 +27,4 @@ def health_check(db: Session = Depends(get_db)):
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(refdata_router, prefix="/refdata", tags=["refdata"])
 app.include_router(watchlist_router, prefix="/watchlist", tags=["watchlist"])
+app.include_router(marketdata_router, prefix="/marketdata", tags=["marketdata"])
