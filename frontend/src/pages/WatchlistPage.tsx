@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getMyWatchlist, removeFromWatchlist, type WatchlistItemRead } from "../api/watchlist";
 import { useAuth } from "../auth/AuthContext";
 import { useQuotes } from "../marketdata/useQuotes";
+import { Link } from "react-router-dom";
 
 export function WatchlistPage() {
   const { token } = useAuth();
@@ -38,7 +39,7 @@ export function WatchlistPage() {
     try {
       await removeFromWatchlist(token, id);
       setMsg("Removed.");
-      await load();
+      setItems((prev) => prev.filter((x) => x.id !== id));
     } catch (e: any) {
       setErr(e?.message ?? "Remove error");
     }
@@ -104,7 +105,12 @@ export function WatchlistPage() {
                   added: {new Date(x.created_at).toLocaleString()}
                 </div>
               </div>
-              <button onClick={() => onRemove(x.id)}>Remove</button>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Link to={`/chart/${x.listing_id}`} style={{ marginRight: 12 }}>
+                  Chart
+                </Link>
+                <button onClick={() => onRemove(x.id)}>Remove</button>
+              </div>
             </div>
           );
         })}

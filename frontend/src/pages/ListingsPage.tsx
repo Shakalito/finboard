@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 
 export function ListingsPage() {
   const { token } = useAuth();
-  const [q, setQ] = useState("AAPL");
+  const [q, setQ] = useState("");
   const [items, setItems] = useState<ListingSummary[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function ListingsPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="ticker or name"
+          placeholder="Search for listings by ticker or name (e.g. AAPL)"
           style={{ flex: 1 }}
         />
         <button onClick={doSearch}>Search</button>

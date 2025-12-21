@@ -4,6 +4,8 @@ import { RegisterPage } from "../pages/RegisterPage";
 import { MePage } from "../pages/MePage";
 import { ListingsPage } from "../pages/ListingsPage";
 import { WatchlistPage } from "../pages/WatchlistPage.tsx";
+import { ChartPage } from "../pages/ChartPage";
+
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/me" replace /> },
@@ -13,4 +15,5 @@ export const router = createBrowserRouter([
 
   { path: "/listings", element: <ListingsPage /> },
   { path: "/watchlist", element: <WatchlistPage /> },
+  { path: "/chart/:listingId", element: <ChartPage /> },
 ]);

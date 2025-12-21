@@ -10,6 +10,7 @@ from ..refdata_service.db_models import Listing, Instrument, Venue
 from .db_models import Ohlcv
 from .schemas import OhlcvPoint, OhlcvResponse, QuoteResponse, FinnhubQuoteRaw, BatchQuotesResponse, BatchQuotesRequest
 from .external_finnhub import FinnhubClient
+from typing import Literal
 
 import httpx
 
@@ -79,11 +80,12 @@ def get_quote(
     )
 
 
+TimeframeLiteral = Literal["m1", "m5", "m15", "h1", "h4", "d1", "w1", "mo1"]
 
 @router.get("/ohlcv", response_model=OhlcvResponse)
 def get_ohlcv(
     listing_id: UUID = Query(..., description="Listing ID from refdata.listings"),
-    timeframe: str = Query("d1"),
+    timeframe: TimeframeLiteral = Query("d1"),
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
     limit: int = Query(default=1000, ge=1, le=5000),
