@@ -232,6 +232,9 @@ CREATE TABLE portfolio.accounts (
         FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS portfolio_accounts_user_type_uniq
+    ON portfolio.accounts (user_id, type);
+
 CREATE TABLE portfolio.account_entries (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id      UUID NOT NULL,
