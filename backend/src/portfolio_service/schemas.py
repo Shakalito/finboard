@@ -52,3 +52,22 @@ class OrderRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FillOrderRequest(BaseModel):
+    fee: float = Field(default=0, ge=0)
+    fee_currency: str | None = Field(default=None, min_length=3, max_length=10)
+
+
+class ExecutionRead(BaseModel):
+    id: UUID
+    order_id: UUID
+    price: float
+    qty: float
+    fee: float
+    fee_currency: str | None
+    executed_at: datetime
+
+    class Config:
+        from_attributes = True
+

@@ -2,7 +2,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -13,8 +13,8 @@ from ..auth_service.db_models import User
 from ..refdata_service.db_models import Listing, Instrument, Venue
 from ..marketdata_service.external_finnhub import FinnhubClient
 
-from .db_models import Account, AccountEntry, Order, Position
-from .schemas import AccountRead, AccountCreate, DepositRequest, BalanceResponse, PlaceOrderRequest, OrderRead
+from .db_models import Account, AccountEntry, Order, Position, Execution
+from .schemas import AccountRead, AccountCreate, DepositRequest, BalanceResponse, PlaceOrderRequest, OrderRead, FillOrderRequest, ExecutionRead
 
 router = APIRouter()
 
@@ -70,6 +70,13 @@ def get_position_qty(db: Session, account_id: UUID, instrument_id: UUID) -> floa
         return 0.0
     return float(pos.quantity)
 
+def get_order_owned(db: Session, order_id: UUID, user_id: UUID) -> Order | None:
+    stmt = (
+        select(Order)
+        .join(Account, Order.account_id == Account.id)
+        .where(Order.id == order_id, Account.user_id == user_id)
+    )
+    return db.execute(stmt).scalar_one_or_none()
 
 
 @router.get("/health")
@@ -256,3 +263,145 @@ def list_my_orders(
 
     rows = db.execute(stmt).scalars().all()
     return [OrderRead.model_validate(x) for x in rows]
+
+
+@router.post("/orders/{order_id}/fill", response_model=ExecutionRead, status_code=status.HTTP_201_CREATED)
+def fill_order(
+    order_id: UUID,
+    payload: FillOrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    order = get_order_owned(db, order_id, current_user.id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.state != "NEW":
+        raise HTTPException(status_code=400, detail=f"Order is not fillable (state={order.state})")
+
+    # For now  refdata is NASDAQ-only
+    listing_stmt = (
+        select(Listing, Venue)
+        .join(Venue, Listing.venue_id == Venue.id)
+        .where(Listing.instrument_id == order.instrument_id, Listing.active.is_(True))
+        .limit(1)
+    )
+    listing_row = db.execute(listing_stmt).one_or_none()
+    if listing_row is None:
+        raise HTTPException(status_code=400, detail="No active listing for this instrument")
+
+    listing, venue = listing_row
+
+    if not listing.ticker:
+        raise HTTPException(status_code=400, detail="Listing has no ticker configured")
+
+    # quote price
+    client = FinnhubClient()
+    q = client.fetch_quote(symbol=listing.ticker)
+    price = q.get("c")
+    if price is None:
+        raise HTTPException(status_code=502, detail="Quote price unavailable")
+
+    price_f = float(price)
+    qty_f = float(order.qty)
+    notional = qty_f * price_f
+
+    # lock-free simple approach; for production you'd want SELECT FOR UPDATE
+    acc_stmt = select(Account).where(Account.id == order.account_id)
+    acc = db.execute(acc_stmt).scalar_one()
+
+    fee = float(payload.fee or 0)
+    fee_cur = (payload.fee_currency or acc.base_currency).upper() if fee > 0 else None
+
+    if order.side == "BUY":
+        cash = get_balance_value(db, acc.id, acc.base_currency)
+        need = notional + (fee if fee_cur == acc.base_currency else 0.0)
+        if cash < need:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient cash to fill: need {need:.2f} {acc.base_currency}, have {cash:.2f} {acc.base_currency}",
+            )
+
+        db.add(AccountEntry(
+            account_id=acc.id,
+            currency=acc.base_currency,
+            amount=-notional,
+            type="TRADE_CASH",
+            ref_id=order.id,
+        ))
+
+    elif order.side == "SELL":
+        pos_qty = get_position_qty(db, acc.id, order.instrument_id)
+        if pos_qty < qty_f:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient position qty to fill: trying to sell {qty_f}, have {pos_qty}",
+            )
+
+        db.add(AccountEntry(
+            account_id=acc.id,
+            currency=acc.base_currency,
+            amount=notional,
+            type="TRADE_CASH",
+            ref_id=order.id,
+        ))
+    else:
+        raise HTTPException(status_code=400, detail="Invalid order side")
+
+    if fee > 0 and fee_cur:
+        db.add(AccountEntry(
+            account_id=acc.id,
+            currency=fee_cur,
+            amount=-fee,
+            type="TRADE_FEE",
+            ref_id=order.id,
+        ))
+
+    pos_stmt = select(Position).where(
+        Position.account_id == acc.id,
+        Position.instrument_id == order.instrument_id,
+    )
+    pos = db.execute(pos_stmt).scalar_one_or_none()
+
+    if order.side == "BUY":
+        if pos is None:
+            pos = Position(
+                account_id=acc.id,
+                instrument_id=order.instrument_id,
+                quantity=qty_f,
+                avg_price=price_f,
+            )
+            db.add(pos)
+        else:
+            old_qty = float(pos.quantity)
+            old_avg = float(pos.avg_price)
+            new_qty = old_qty + qty_f
+            # weighted avg
+            new_avg = ((old_qty * old_avg) + (qty_f * price_f)) / new_qty if new_qty != 0 else 0.0
+            pos.quantity = new_qty
+            pos.avg_price = new_avg
+
+    else:
+        if pos is None:
+            raise HTTPException(status_code=400, detail="Position missing (cannot sell)")
+        old_qty = float(pos.quantity)
+        new_qty = old_qty - qty_f
+        if new_qty < 0:
+            raise HTTPException(status_code=400, detail="Position qty would go negative")
+        pos.quantity = new_qty
+
+    exe = Execution(
+        order_id=order.id,
+        price=price_f,
+        qty=qty_f,
+        fee=fee,
+        fee_currency=fee_cur,
+    )
+    db.add(exe)
+
+    order.state = "FILLED"
+
+    db.commit()
+    db.refresh(exe)
+
+    return ExecutionRead.model_validate(exe)
