@@ -71,3 +71,23 @@ class ExecutionRead(BaseModel):
     class Config:
         from_attributes = True
 
+
+class PositionRead(BaseModel):
+    position_id: UUID
+    account_id: UUID
+    instrument_id: UUID
+    listing_id: UUID | None = None
+    ticker: str | None
+    name: str
+    venue_code: str
+    qty: float
+    avg_price: float
+
+    last_price: float | None
+    market_value: float | None
+    unrealized_pnl_abs: float | None
+    unrealized_pnl_pct: float | None
+    asof: datetime | None
+
+    class Config:
+        from_attributes = True

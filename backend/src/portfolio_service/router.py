@@ -1,6 +1,7 @@
 from __future__ import annotations
 from uuid import UUID
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import Session
@@ -14,7 +15,7 @@ from ..refdata_service.db_models import Listing, Instrument, Venue
 from ..marketdata_service.external_finnhub import FinnhubClient
 
 from .db_models import Account, AccountEntry, Order, Position, Execution
-from .schemas import AccountRead, AccountCreate, DepositRequest, BalanceResponse, PlaceOrderRequest, OrderRead, FillOrderRequest, ExecutionRead
+from .schemas import AccountRead, AccountCreate, DepositRequest, BalanceResponse, PlaceOrderRequest, OrderRead, FillOrderRequest, ExecutionRead, PositionRead
 
 router = APIRouter()
 
@@ -77,6 +78,21 @@ def get_order_owned(db: Session, order_id: UUID, user_id: UUID) -> Order | None:
         .where(Order.id == order_id, Account.user_id == user_id)
     )
     return db.execute(stmt).scalar_one_or_none()
+
+
+def get_active_listing_for_instrument(db: Session, instrument_id: UUID):
+    stmt = (
+        select(Listing, Instrument, Venue)
+        .join(Instrument, Listing.instrument_id == Instrument.id)
+        .join(Venue, Listing.venue_id == Venue.id)
+        .where(
+            Listing.instrument_id == instrument_id,
+            Listing.active.is_(True),
+        )
+        .order_by(Listing.ticker.asc().nulls_last())
+        .limit(1)
+    )
+    return db.execute(stmt).one_or_none()
 
 
 @router.get("/health")
@@ -405,3 +421,137 @@ def fill_order(
     db.refresh(exe)
 
     return ExecutionRead.model_validate(exe)
+
+
+@router.get("/positions/me", response_model=list[PositionRead])
+async def get_my_positions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    acc_stmt = select(Account).where(
+        Account.user_id == current_user.id,
+        Account.type == "PAPER",
+    )
+    account = db.execute(acc_stmt).scalar_one_or_none()
+    if account is None:
+        return []
+
+    pos_stmt = (
+        select(Position)
+        .where(Position.account_id == account.id)
+        .order_by(Position.instrument_id.asc())
+    )
+    positions = db.execute(pos_stmt).scalars().all()
+    if not positions:
+        return []
+
+    enriched: list[dict] = []
+    tickers: list[str] = []
+    ticker_to_listing_id: dict[str, UUID] = {}
+
+    for pos in positions:
+        qty = float(pos.quantity)
+        avg = float(pos.avg_price)
+
+        row = get_active_listing_for_instrument(db, pos.instrument_id)
+        if row is None:
+            enriched.append(
+                {
+                    "pos": pos,
+                    "qty": qty,
+                    "avg": avg,
+                    "listing": None,
+                    "instrument": None,
+                    "venue": None,
+                    "ticker": None,
+                }
+            )
+            continue
+
+        listing, instrument, venue = row
+        ticker = listing.ticker
+
+        if ticker:
+            tickers.append(ticker)
+            ticker_to_listing_id[ticker] = listing.id
+
+        enriched.append(
+            {
+                "pos": pos,
+                "qty": qty,
+                "avg": avg,
+                "listing": listing,
+                "instrument": instrument,
+                "venue": venue,
+                "ticker": ticker,
+            }
+        )
+
+    client = FinnhubClient()
+    quotes_by_ticker = await client.fetch_quotes_many(tickers, concurrency=5) if tickers else {}
+
+    results: list[PositionRead] = []
+
+    for item in enriched:
+        pos: Position = item["pos"]
+        qty: float = item["qty"]
+        avg: float = item["avg"]
+
+        listing: Listing | None = item["listing"]
+        instrument: Instrument | None = item["instrument"]
+        venue: Venue | None = item["venue"]
+        ticker: str | None = item["ticker"]
+
+        last_price: float | None = None
+        asof: datetime | None = None
+
+        if ticker:
+            q = quotes_by_ticker.get(ticker) or {}
+            price = q.get("c")
+            ts = q.get("t")
+
+            if price is not None:
+                try:
+                    last_price = float(price)
+                except (TypeError, ValueError):
+                    last_price = None
+
+            if ts:
+                try:
+                    asof = datetime.fromtimestamp(int(ts), tz=timezone.utc)
+                except (TypeError, ValueError):
+                    asof = None
+
+        market_value = None
+        pnl_abs = None
+        pnl_pct = None
+
+        if last_price is not None:
+            market_value = qty * last_price
+            pnl_abs = (last_price - avg) * qty
+            pnl_pct = ((last_price / avg) - 1.0) * 100.0 if avg != 0 else None
+
+        listing_id = listing.id if listing is not None else None
+        name = instrument.name if instrument is not None else "(unknown instrument)"
+        venue_code = venue.code if venue is not None else ""
+
+        results.append(
+            PositionRead(
+                position_id=pos.id,
+                account_id=pos.account_id,
+                instrument_id=pos.instrument_id,
+                listing_id=listing_id,
+                ticker=ticker,
+                name=name,
+                venue_code=venue_code,
+                qty=qty,
+                avg_price=avg,
+                last_price=last_price,
+                market_value=market_value,
+                unrealized_pnl_abs=pnl_abs,
+                unrealized_pnl_pct=pnl_pct,
+                asof=asof,
+            )
+        )
+
+    return results
