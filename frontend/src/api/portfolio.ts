@@ -57,10 +57,10 @@ export async function getMyAccounts(token: string): Promise<AccountRead[]> {
   return apiFetch<AccountRead[]>("/portfolio/accounts/me", {}, token);
 }
 
-export async function getBalance(
+export async function getAccountBalance(
   token: string,
   accountId: string,
-  currency = "USD"
+  currency: string
 ): Promise<BalanceResponse> {
   const q = new URLSearchParams({ currency });
   return apiFetch<BalanceResponse>(
@@ -73,6 +73,21 @@ export async function getBalance(
 export async function getMyPositions(token: string): Promise<PositionRead[]> {
   return apiFetch<PositionRead[]>("/portfolio/positions/me", {}, token);
 }
+
+export async function createPaperAccount(
+  token: string,
+  baseCurrency = "USD"
+): Promise<AccountRead> {
+  return apiFetch<AccountRead>(
+    "/portfolio/accounts",
+    {
+      method: "POST",
+      body: JSON.stringify({ base_currency: baseCurrency }),
+    },
+    token
+  );
+}
+
 
 export async function placeOrder(
   token: string,

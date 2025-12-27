@@ -5,6 +5,7 @@ import { MePage } from "../pages/MePage";
 import { ListingsPage } from "../pages/ListingsPage";
 import { WatchlistPage } from "../pages/WatchlistPage.tsx";
 import { ChartPage } from "../pages/ChartPage";
+
 import { PortfolioPage } from "../pages/PortfolioPage";
 import { PortfolioOrdersPage } from "../pages/PortfolioOrdersPage";
 import { PortfolioDepositPage } from "../pages/PortfolioDepositPage";
