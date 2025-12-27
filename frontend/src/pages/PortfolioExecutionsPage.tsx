@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { getMyOrders, type OrderRead } from "../api/portfolioHistory";
+import { getMyExecutions, type ExecutionRead } from "../api/portfolioHistory";
+
 
 const DEFAULT_LIMIT = 50;
 
@@ -9,13 +10,13 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleString();
 }
 
-export function PortfolioOrdersPage() {
+export function PortfolioExecutionsPage() {
   const { token } = useAuth();
-  const [orders, setOrders] = useState<OrderRead[]>([]);
+  const [execs, setExecs] = useState<ExecutionRead[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const shown = useMemo(() => orders.slice(0, DEFAULT_LIMIT), [orders]);
+  const shown = useMemo(() => execs.slice(0, DEFAULT_LIMIT), [execs]);
 
   async function load() {
     setErr(null);
@@ -25,10 +26,10 @@ export function PortfolioOrdersPage() {
     }
     setLoading(true);
     try {
-      const data = await getMyOrders(token);
-      setOrders(data);
+      const data = await getMyExecutions(token);
+      setExecs(data);
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to load orders.");
+      setErr(e?.message ?? "Failed to load executions.");
     } finally {
       setLoading(false);
     }
@@ -41,11 +42,11 @@ export function PortfolioOrdersPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <h2>Portfolio • Orders</h2>
+      <h2>Portfolio • Executions</h2>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <Link to="/portfolio">Back to portfolio</Link>
-        <Link to="/portfolio/executions">Executions</Link>
+        <Link to="/portfolio/orders">Orders</Link>
         <button onClick={load} disabled={loading}>
           Refresh
         </button>
@@ -56,7 +57,7 @@ export function PortfolioOrdersPage() {
 
       {!loading && !err && (
         <p style={{ opacity: 0.8 }}>
-          Showing {Math.min(DEFAULT_LIMIT, orders.length)} of {orders.length} orders (display limit set in UI).
+          Showing {Math.min(DEFAULT_LIMIT, execs.length)} of {execs.length} executions (limit in UI).
         </p>
       )}
 
@@ -64,38 +65,37 @@ export function PortfolioOrdersPage() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={th}>Created</th>
-              <th style={th}>Side</th>
+              <th style={th}>Executed</th>
               <th style={th}>Qty</th>
-              <th style={th}>State</th>
-              <th style={th}>Instrument</th>
-              <th style={th}>Account</th>
+              <th style={th}>Price</th>
+              <th style={th}>Fee</th>
               <th style={th}>Order ID</th>
+              <th style={th}>Exec ID</th>
             </tr>
           </thead>
           <tbody>
-            {shown.map((o) => (
-              <tr key={o.id}>
-                <td style={td}>{fmtDate(o.created_at)}</td>
-                <td style={td}>{o.side}</td>
-                <td style={td}>{o.qty}</td>
-                <td style={td}>{o.state}</td>
-                <td style={td} title={o.instrument_id}>
-                  {o.instrument_id.slice(0, 8)}…
+            {shown.map((x) => (
+              <tr key={x.id}>
+                <td style={td}>{fmtDate(x.executed_at)}</td>
+                <td style={td}>{x.qty}</td>
+                <td style={td}>{x.price}</td>
+                <td style={td}>
+                  {x.fee}
+                  {x.fee_currency ? ` ${x.fee_currency}` : ""}
                 </td>
-                <td style={td} title={o.account_id}>
-                  {o.account_id.slice(0, 8)}…
+                <td style={td} title={x.order_id}>
+                  {x.order_id.slice(0, 8)}…
                 </td>
-                <td style={td} title={o.id}>
-                  {o.id.slice(0, 8)}…
+                <td style={td} title={x.id}>
+                  {x.id.slice(0, 8)}…
                 </td>
               </tr>
             ))}
 
             {shown.length === 0 && !loading && (
               <tr>
-                <td style={td} colSpan={7}>
-                  No orders.
+                <td style={td} colSpan={6}>
+                  No executions.
                 </td>
               </tr>
             )}
