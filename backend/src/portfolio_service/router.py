@@ -3,7 +3,7 @@ from uuid import UUID
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, desc
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -272,7 +272,7 @@ def list_my_orders(
         select(Order)
         .join(Account, Order.account_id == Account.id)
         .where(Account.user_id == current_user.id)
-        .order_by(Order.created_at.desc())
+        .order_by(desc(Order.created_at))
     )
     if account_id:
         stmt = stmt.where(Order.account_id == account_id)
@@ -555,3 +555,20 @@ async def get_my_positions(
         )
 
     return results
+
+
+@router.get("/executions/me", response_model=list[ExecutionRead])
+def get_my_executions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stmt = (
+        select(Execution)
+        .join(Order, Order.id == Execution.order_id)
+        .join(Account, Account.id == Order.account_id)
+        .where(Account.user_id == current_user.id)
+        .order_by(desc(Execution.executed_at))
+    )
+
+    rows = db.execute(stmt).scalars().all()
+    return [ExecutionRead.model_validate(r) for r in rows]
