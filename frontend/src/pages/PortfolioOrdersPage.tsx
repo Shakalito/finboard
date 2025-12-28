@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { getMyOrders, type OrderRead } from "../api/portfolioHistory";
+import { getMyOrders } from "../api/portfolioHistory";
+import { fillOrder, type OrderRead } from "../api/portfolio";
 
 const DEFAULT_LIMIT = 50;
 
@@ -13,6 +14,7 @@ export function PortfolioOrdersPage() {
   const { token } = useAuth();
   const [orders, setOrders] = useState<OrderRead[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const shown = useMemo(() => orders.slice(0, DEFAULT_LIMIT), [orders]);
@@ -34,6 +36,22 @@ export function PortfolioOrdersPage() {
     }
   }
 
+  async function onFill(orderId: string) {
+      if (!token) return;
+      setErr(null);
+      setMsg(null);
+      setLoading(true);
+      try {
+        await fillOrder(token, orderId);
+        setMsg("Order filled successfully!");
+        await load(); 
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to fill order");
+      } finally {
+        setLoading(false);
+      }
+    }
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,6 +69,7 @@ export function PortfolioOrdersPage() {
         </button>
       </div>
 
+      {msg && <p style={{ color: "green", fontWeight: "bold" }}>{msg}</p>}
       {err && <p style={{ color: "crimson" }}>{err}</p>}
       {loading && <p>Loading...</p>}
 
@@ -71,6 +90,7 @@ export function PortfolioOrdersPage() {
               <th style={th}>Instrument</th>
               <th style={th}>Account</th>
               <th style={th}>Order ID</th>
+              <th style={th}></th>
             </tr>
           </thead>
           <tbody>
@@ -89,12 +109,22 @@ export function PortfolioOrdersPage() {
                 <td style={td} title={o.id}>
                   {o.id.slice(0, 8)}…
                 </td>
+
+                <td style={td}>
+                  {o.state === "NEW" || o.state === "SUBMITTED" ? (
+                    <button onClick={() => onFill(o.id)} disabled={loading}>
+                      Execute
+                    </button>
+                  ) : (
+                    <span style={{ opacity: 0.5 }}>—</span>
+                  )}
+                </td>
               </tr>
             ))}
 
             {shown.length === 0 && !loading && (
               <tr>
-                <td style={td} colSpan={7}>
+                <td style={td} colSpan={8}>
                   No orders.
                 </td>
               </tr>

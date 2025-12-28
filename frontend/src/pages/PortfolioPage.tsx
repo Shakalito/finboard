@@ -3,60 +3,72 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
   createPaperAccount,
+  deposit,
   getAccountBalance,
   getMyAccounts,
   getMyPositions,
+  placeOrder,
   type AccountRead,
-  type BalanceResponse,
   type PositionRead,
 } from "../api/portfolio";
 
-function fmtMoney(v: number | null | undefined, currency = "USD") {
-  if (v == null || Number.isNaN(v)) return "—";
-  return `${v.toFixed(2)} ${currency}`;
+type Side = "BUY" | "SELL";
+
+function isUuidLike(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    v.trim()
+  );
 }
 
-function fmtNum(v: number | null | undefined, digits = 2) {
+function fmtMoney(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return "—";
-  return v.toFixed(digits);
+  return v.toFixed(2);
 }
 
-function fmtPct(v: number | null | undefined) {
+function fmtNum(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return "—";
-  return `${(v * 100).toFixed(2)}%`;
+  return String(v);
 }
 
 export function PortfolioPage() {
   const { token } = useAuth();
 
   const [account, setAccount] = useState<AccountRead | null>(null);
-  const [balance, setBalance] = useState<BalanceResponse | null>(null);
+  const [cash, setCash] = useState<number | null>(null);
   const [positions, setPositions] = useState<PositionRead[]>([]);
-
   const [loading, setLoading] = useState(false);
+
+  const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  const [depAmount, setDepAmount] = useState<string>("1000");
 
-  const currency = useMemo(() => account?.base_currency ?? "USD", [account]);
+  const [side, setSide] = useState<Side>("BUY");
+  const [listingId, setListingId] = useState<string>("");
+  const [qty, setQty] = useState<string>("1");
+  const [tradeBusy, setTradeBusy] = useState(false);
 
-  async function loadAll() {
+  const canUseApi = useMemo(() => !!token, [token]);
+
+  async function ensurePaperAccount(): Promise<AccountRead> {
+    const accs = await getMyAccounts(token!);
+    const paper = accs.find((a) => a.type === "PAPER") ?? null;
+    if (paper) return paper;
+
+    return await createPaperAccount(token!, "USD");
+  }
+
+  async function refreshAll() {
     if (!token) return;
-
     setLoading(true);
     setErr(null);
 
     try {
-      let accs = await getMyAccounts(token);
-      let paper = accs.find((a) => a.type === "PAPER") ?? null;
-
-      if (!paper) {
-        paper = await createPaperAccount(token, "USD");
-      }
-
+      const paper = await ensurePaperAccount();
       setAccount(paper);
 
       const bal = await getAccountBalance(token, paper.id, paper.base_currency);
-      setBalance(bal);
+      setCash(bal.balance);
 
       const pos = await getMyPositions(token);
       setPositions(pos);
@@ -68,17 +80,88 @@ export function PortfolioPage() {
   }
 
   useEffect(() => {
-    if (!token) return;
-    void loadAll();
+    if (!token) {
+      setAccount(null);
+      setCash(null);
+      setPositions([]);
+      return;
+    }
+    refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  async function onDepositClick() {
+    setMsg(null);
+    setErr(null);
+    if (!token) return;
+    if (!account) {
+      setErr("No account available.");
+      return;
+    }
+
+    const amount = Number(depAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setErr("Deposit amount must be > 0.");
+      return;
+    }
+
+    try {
+      await deposit(token, account.id, amount, account.base_currency);
+      setMsg("Deposit completed.");
+      await refreshAll();
+    } catch (e: any) {
+      setErr(e?.message ?? "Deposit error");
+    }
+  }
+
+  async function onTradeClick() {
+    setMsg(null);
+    setErr(null);
+    if (!token) return;
+    if (!account) {
+      setErr("No account available.");
+      return;
+    }
+
+    const lid = listingId.trim();
+    const q = Number(qty);
+
+    if (!isUuidLike(lid)) {
+      setErr("listing_id must be a valid UUID.");
+      return;
+    }
+    if (!Number.isFinite(q) || q <= 0) {
+      setErr("qty must be > 0.");
+      return;
+    }
+
+    setTradeBusy(true);
+    try {
+      await placeOrder(token, {
+        account_id: account.id,
+        listing_id: lid,
+        side,
+        qty: q,
+      });
+
+      setMsg(`${side} order created.`);
+      await refreshAll();
+    } catch (e: any) {
+      setErr(e?.message ?? "Order error");
+    } finally {
+      setTradeBusy(false);
+    }
+  }
 
   if (!token) {
     return (
       <div style={{ padding: 24, maxWidth: 1100 }}>
         <h2>Portfolio</h2>
-        <p>You must be logged in.</p>
-        <Link to="/login">Go to login</Link>
+        <p style={{ color: "crimson" }}>You must be logged in to view portfolio.</p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Link to="/login">Login</Link>
+          <Link to="/me">Me</Link>
+        </div>
       </div>
     );
   }
@@ -89,85 +172,168 @@ export function PortfolioPage() {
 
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <Link to="/watchlist">Watchlist</Link>
-        <Link to="/portfolio/deposit">Deposit</Link>
         <Link to="/portfolio/orders">Orders</Link>
         <Link to="/portfolio/executions">Executions</Link>
-
-        <button onClick={() => void loadAll()} disabled={loading}>
-          {loading ? "Refreshing..." : "Refresh"}
+        <Link to="/portfolio/deposit">Deposit</Link>
+        <button onClick={() => refreshAll()} disabled={loading}>
+          Refresh
         </button>
       </div>
 
+      {msg && <p>{msg}</p>}
       {err && <p style={{ color: "crimson" }}>{err}</p>}
 
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: 10,
-          padding: 12,
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 12, opacity: 0.8 }}>Paper account</div>
-        <div style={{ fontWeight: 700, fontSize: 18, marginTop: 6 }}>
-          Cash balance: {fmtMoney(balance?.balance ?? null, currency)}
+      <div style={{ display: "grid", gap: 12 }}>
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            padding: 12,
+            display: "grid",
+            gap: 6,
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>Account</div>
+          {!account && <div>Loading account...</div>}
+          {account && (
+            <>
+              <div style={{ fontSize: 13, opacity: 0.85 }}>id: {account.id}</div>
+              <div>
+                Cash balance:{" "}
+                <b>
+                  {cash == null ? "—" : fmtMoney(cash)} {account.base_currency}
+                </b>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input
+                  value={depAmount}
+                  onChange={(e) => setDepAmount(e.target.value)}
+                  placeholder="Deposit amount"
+                  style={{ width: 160 }}
+                />
+                <button onClick={() => onDepositClick()} disabled={loading}>
+                  Deposit
+                </button>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>
+                  Tip: base currency = {account.base_currency}
+                </span>
+              </div>
+            </>
+          )}
         </div>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-          account_id: {account?.id ?? "—"}
-        </div>
-      </div>
 
-      <h3>Positions</h3>
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            padding: 12,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>Trade</div>
 
-      {positions.length === 0 && <p>No positions.</p>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                onClick={() => setSide("BUY")}
+                disabled={tradeBusy}
+                style={{
+                  fontWeight: side === "BUY" ? 700 : 400,
+                }}
+              >
+                BUY
+              </button>
+              <button
+                onClick={() => setSide("SELL")}
+                disabled={tradeBusy}
+                style={{
+                  fontWeight: side === "SELL" ? 700 : 400,
+                }}
+              >
+                SELL
+              </button>
+            </div>
 
-      {positions.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={th}>Ticker</th>
-                <th style={th}>Name</th>
-                <th style={th}>Qty</th>
-                <th style={th}>Avg</th>
-                <th style={th}>Last</th>
-                <th style={th}>Value</th>
-                <th style={th}>PnL</th>
-                <th style={th}>PnL %</th>
-                <th style={th}>As of</th>
-              </tr>
-            </thead>
-            <tbody>
-              {positions.map((p) => (
-                <tr key={p.position_id}>
-                  <td style={td}>{p.ticker ?? "—"}</td>
-                  <td style={td}>{p.name}</td>
-                  <td style={td}>{fmtNum(p.qty, 4)}</td>
-                  <td style={td}>{fmtMoney(p.avg_price, currency)}</td>
+            <input
+              value={listingId}
+              onChange={(e) => setListingId(e.target.value)}
+              placeholder="listing_id (UUID)"
+              style={{ minWidth: 360 }}
+              disabled={tradeBusy || !canUseApi}
+            />
 
-                  {/* NULL PRICE SUPPORT: last_price może być null */}
-                  <td style={td}>{fmtMoney(p.last_price ?? null, currency)}</td>
+            <input
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder="qty"
+              style={{ width: 120 }}
+              disabled={tradeBusy || !canUseApi}
+            />
 
-                  {/* market_value może być null, jeśli last_price null */}
-                  <td style={td}>{fmtMoney(p.market_value ?? null, currency)}</td>
+            <button onClick={() => onTradeClick()} disabled={tradeBusy || !account}>
+              {tradeBusy ? "Submitting..." : "Submit"}
+            </button>
+          </div>
 
-                  {/* pnl może być null */}
-                  <td style={td}>{fmtMoney(p.unrealized_pnl_abs ?? null, currency)}</td>
-                  <td style={td}>{fmtPct(p.unrealized_pnl_pct ?? null)}</td>
-
-                  <td style={td}>
-                    {p.asof ? new Date(p.asof).toLocaleString() : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-            Note: Last/Value/PnL can be “—” when price is unavailable.
+          <div style={{ fontSize: 12, opacity: 0.75 }}>
+            Tip: listing_id from DB (refdata.listings).
           </div>
         </div>
-      )}
+
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            padding: 12,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Positions</div>
+
+          {loading && <div>Loading...</div>}
+          {!loading && positions.length === 0 && <div>No positions.</div>}
+
+          {!loading && positions.length > 0 && (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Ticker</th>
+                    <th style={th}>Name</th>
+                    <th style={th}>Venue</th>
+                    <th style={th}>Qty</th>
+                    <th style={th}>Avg</th>
+                    <th style={th}>Last</th>
+                    <th style={th}>Value</th>
+                    <th style={th}>PnL</th>
+                    <th style={th}>PnL %</th>
+                    <th style={th}>As of</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positions.map((p) => (
+                    <tr key={p.position_id}>
+                      <td style={td}>{p.ticker ?? "—"}</td>
+                      <td style={td}>{p.name}</td>
+                      <td style={td}>{p.venue_code}</td>
+                      <td style={td}>{fmtNum(p.qty)}</td>
+                      <td style={td}>{fmtMoney(p.avg_price)}</td>
+                      <td style={td}>{fmtMoney(p.last_price)}</td>
+                      <td style={td}>{fmtMoney(p.market_value)}</td>
+                      <td style={td}>{fmtMoney(p.unrealized_pnl_abs)}</td>
+                      <td style={td}>
+                        {p.unrealized_pnl_pct == null ? "—" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
+                      </td>
+                      <td style={td}>{p.asof ? new Date(p.asof).toLocaleString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

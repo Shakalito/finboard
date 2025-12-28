@@ -118,3 +118,14 @@ export async function deposit(
     token
   );
 }
+
+export async function fillOrder(token: string, orderId: string): Promise<void> {
+  await apiFetchVoid(
+    `/portfolio/orders/${orderId}/fill`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+    token
+  );
+}
