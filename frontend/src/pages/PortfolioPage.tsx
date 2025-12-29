@@ -11,14 +11,10 @@ import {
   type AccountRead,
   type PositionRead,
 } from "../api/portfolio";
+import { ListingDropdown } from "../components/ListingDropdown";
+import type { ListingSummary } from "../api/refdata";
 
 type Side = "BUY" | "SELL";
-
-function isUuidLike(v: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    v.trim()
-  );
-}
 
 function fmtMoney(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return "—";
@@ -44,7 +40,7 @@ export function PortfolioPage() {
   const [depAmount, setDepAmount] = useState<string>("1000");
 
   const [side, setSide] = useState<Side>("BUY");
-  const [listingId, setListingId] = useState<string>("");
+  const [selectedListing, setSelectedListing] = useState<ListingSummary | null>(null);
   const [qty, setQty] = useState<string>("1");
   const [tradeBusy, setTradeBusy] = useState(false);
 
@@ -117,21 +113,21 @@ export function PortfolioPage() {
   async function onTradeClick() {
     setMsg(null);
     setErr(null);
+
     if (!token) return;
     if (!account) {
       setErr("No account available.");
       return;
     }
 
-    const lid = listingId.trim();
-    const q = Number(qty);
-
-    if (!isUuidLike(lid)) {
-      setErr("listing_id must be a valid UUID.");
+    if (!selectedListing?.id) {
+      setErr("Please select a listing from the dropdown first.");
       return;
     }
+
+    const q = Number(qty);
     if (!Number.isFinite(q) || q <= 0) {
-      setErr("qty must be > 0.");
+      setErr("Quantity must be greater than 0.");
       return;
     }
 
@@ -139,12 +135,13 @@ export function PortfolioPage() {
     try {
       await placeOrder(token, {
         account_id: account.id,
-        listing_id: lid,
+        listing_id: selectedListing.id,
         side,
         qty: q,
       });
 
-      setMsg(`${side} order created.`);
+      setMsg(`${side} order created successfully.`);
+      //setSelectedListing(null)
       await refreshAll();
     } catch (e: any) {
       setErr(e?.message ?? "Order error");
@@ -256,13 +253,13 @@ export function PortfolioPage() {
               </button>
             </div>
 
-            <input
-              value={listingId}
-              onChange={(e) => setListingId(e.target.value)}
-              placeholder="listing_id (UUID)"
-              style={{ minWidth: 360 }}
-              disabled={tradeBusy || !canUseApi}
-            />
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.8 }}>
+                Listing (select by ticker/name)
+              </div>
+              <ListingDropdown value={selectedListing} onChange={setSelectedListing} />
+            </div>
+
 
             <input
               value={qty}
@@ -272,13 +269,16 @@ export function PortfolioPage() {
               disabled={tradeBusy || !canUseApi}
             />
 
-            <button onClick={() => onTradeClick()} disabled={tradeBusy || !account}>
+            <button onClick={() => onTradeClick()} disabled={tradeBusy || !account}
+            style={{
+              padding: "8px 16px",
+              cursor: (tradeBusy || !selectedListing?.id) ? "not-allowed" : "pointer",
+              backgroundColor: side === "BUY" ? "#e8f5e9" : "#ffebee",
+              border: "1px solid #ccc",
+              borderRadius: "4px"
+            }}>
               {tradeBusy ? "Submitting..." : "Submit"}
             </button>
-          </div>
-
-          <div style={{ fontSize: 12, opacity: 0.75 }}>
-            Tip: listing_id from DB (refdata.listings).
           </div>
         </div>
 
