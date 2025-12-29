@@ -5,6 +5,7 @@ import { LineCloseChart } from "../charts/LineCloseChart";
 import { CandlestickChart } from "../charts/CandlestickChart";
 import { Link } from "react-router-dom";
 
+
 type RangeKey = "3m" | "6m" | "1y" | "5y";
 
 function isoDaysAgo(days: number) {
