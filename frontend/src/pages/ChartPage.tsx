@@ -4,6 +4,7 @@ import { getOhlcv, type OhlcvResponse } from "../api/ohlcv";
 import { LineCloseChart } from "../charts/LineCloseChart";
 import { CandlestickChart } from "../charts/CandlestickChart";
 import { Link } from "react-router-dom";
+import { sma } from "../marketdata/indicators";
 
 
 type RangeKey = "3m" | "6m" | "1y" | "5y";
@@ -27,6 +28,16 @@ export function ChartPage() {
     if (range === "1y") return { date_from: isoDaysAgo(365), limit: 320 };
     return { date_from: isoDaysAgo(365 * 5), limit: 1400 };
   }, [range]);
+
+  const sma20 = useMemo(() => {
+    if (!data?.points?.length) return undefined;
+    return sma(data.points, 20).map(p => p.value);
+  }, [data]);
+
+  const sma50 = useMemo(() => {
+    if (!data?.points?.length) return undefined;
+    return sma(data.points, 50).map(p => p.value);
+  }, [data]);
 
   useEffect(() => {
     (async () => {
@@ -69,8 +80,12 @@ export function ChartPage() {
           <h3 style={{ marginTop: 16 }}>Candlestick (D1)</h3>
           <CandlestickChart points={data.points} />
 
-          <h3 style={{ marginTop: 24 }}>Close line (D1)</h3>
-          <LineCloseChart points={data.points} />
+          <h3 style={{ marginTop: 24 }}>Close line (D1) with SMA</h3>
+          <LineCloseChart
+            points={data.points}
+            sma20={sma20}
+            sma50={sma50}
+          />
         </>
       )}
     </div>
