@@ -4,7 +4,8 @@ import { getOhlcv, type OhlcvResponse } from "../api/ohlcv";
 import { LineCloseChart } from "../charts/LineCloseChart";
 import { CandlestickChart } from "../charts/CandlestickChart";
 import { Link } from "react-router-dom";
-import { sma } from "../marketdata/indicators";
+import { sma, rsi } from "../marketdata/indicators";
+import { RsiChart } from "../charts/RsiChart";
 
 
 type RangeKey = "3m" | "6m" | "1y" | "5y";
@@ -21,6 +22,7 @@ export function ChartPage() {
   const [data, setData] = useState<OhlcvResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [range, setRange] = useState<RangeKey>("1y");
+  const [showRsi, setShowRsi] = useState(false);
 
   const query = useMemo(() => {
     if (range === "3m") return { date_from: isoDaysAgo(90), limit: 120 };
@@ -38,6 +40,12 @@ export function ChartPage() {
     if (!data?.points?.length) return undefined;
     return sma(data.points, 50).map(p => p.value);
   }, [data]);
+
+  const rsi14 = useMemo(() => {
+  if (!data?.points?.length) return undefined;
+  return rsi(data.points, 14).map(p => p.value);
+}, [data]);
+
 
   useEffect(() => {
     (async () => {
@@ -68,6 +76,16 @@ export function ChartPage() {
         <button onClick={() => setRange("6m")} disabled={range === "6m"}>6M</button>
         <button onClick={() => setRange("1y")} disabled={range === "1y"}>1Y</button>
         <button onClick={() => setRange("5y")} disabled={range === "5y"}>5Y</button>
+
+        <span style={{ marginLeft: 12 }}>Indicators:</span>
+        <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={showRsi}
+            onChange={(e) => setShowRsi(e.target.checked)}
+          />
+          show RSI
+        </label>
       </div>
 
       {err && <p style={{ color: "crimson" }}>{err}</p>}
@@ -86,6 +104,15 @@ export function ChartPage() {
             sma20={sma20}
             sma50={sma50}
           />
+          {showRsi && (
+            <>
+              <h3 style={{ marginTop: 24 }}>RSI (14)</h3>
+              <RsiChart
+                timestamps={data.points.map((p) => p.ts)}
+                rsi={rsi14 ?? []}
+              />
+            </>
+          )}
         </>
       )}
     </div>

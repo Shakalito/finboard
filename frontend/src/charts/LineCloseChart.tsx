@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
+import { useChartWidth } from "../hooks/useChartWidth";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import type { OhlcvPoint } from "../api/ohlcv";
 
@@ -10,20 +11,8 @@ type Props = {
 
 export function LineCloseChart({ points, sma20, sma50 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState<number>(0);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const ro = new ResizeObserver((entries) => {
-      const w = Math.floor(entries[0].contentRect.width);
-      if (w > 0) setWidth(w);
-    });
-
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const width = useChartWidth(containerRef);
 
   const data = useMemo(
     () =>
@@ -39,7 +28,7 @@ export function LineCloseChart({ points, sma20, sma50 }: Props) {
   return (
     <div ref={containerRef} style={{ width: "100%", height: 350, minHeight: 350, minWidth: 0 }}>
       {width > 0 && (
-        <LineChart width={width} height={350} data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart width={width} height={350} data={data} syncId="chart-sync" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <XAxis
             dataKey="ts"
             tickFormatter={(v) => {
