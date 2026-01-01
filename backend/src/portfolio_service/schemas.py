@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+from pydantic import BaseModel, Field
+
+
+class AccountRead(BaseModel):
+    id: UUID
+    user_id: UUID
+    base_currency: str
+    type: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AccountCreate(BaseModel):
+    base_currency: str = Field(default="USD", min_length=3, max_length=10)
+
+
+class DepositRequest(BaseModel):
+    amount: float = Field(..., gt=0)
+    currency: str = Field(default="USD", min_length=3, max_length=10)
+
+
+class BalanceResponse(BaseModel):
+    account_id: UUID
+    currency: str
+    balance: float
+
+class PlaceOrderRequest(BaseModel):
+    account_id: UUID
+    listing_id: UUID
+    side: str = Field(..., pattern="^(BUY|SELL)$")
+    qty: float = Field(..., gt=0)
+
+
+class OrderRead(BaseModel):
+    id: UUID
+    account_id: UUID
+    instrument_id: UUID
+    side: str
+    type: str
+    qty: float
+    limit_price: float | None
+    state: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FillOrderRequest(BaseModel):
+    fee: float = Field(default=0, ge=0)
+    fee_currency: str | None = Field(default=None, min_length=3, max_length=10)
+
+
+class ExecutionRead(BaseModel):
+    id: UUID
+    order_id: UUID
+    price: float
+    qty: float
+    fee: float
+    fee_currency: str | None
+    executed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PositionRead(BaseModel):
+    position_id: UUID
+    account_id: UUID
+    instrument_id: UUID
+    listing_id: UUID | None = None
+    ticker: str | None
+    name: str
+    venue_code: str
+    qty: float
+    avg_price: float
+
+    last_price: float | None
+    market_value: float | None
+    unrealized_pnl_abs: float | None
+    unrealized_pnl_pct: float | None
+    asof: datetime | None
+
+    class Config:
+        from_attributes = True
