@@ -1,7 +1,9 @@
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export function MePage() {
   const { user, token, isLoading, error, signOut, refreshMe } = useAuth();
+  const navigate = useNavigate();
 
   if (isLoading) return <div style={{ padding: 24 }}>Loading...</div>;
 
@@ -11,23 +13,21 @@ export function MePage() {
 
       {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-      {!token && (
-        <p>
-          Not logged in. Go to <a href="/login">Login</a>
-        </p>
-      )}
+      {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-      {token && !user && <p>Token exists, but user not loaded.</p>}
+
+      {token && !user && <div>Loading user data...</div>}
 
       {user && (
         <>
           <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 8 }}>
-{JSON.stringify(user, null, 2)}
+            {JSON.stringify(user, null, 2)}
           </pre>
 
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link to="/portfolio" style={{ marginRight: "auto" }}>Portfolio</Link>
             <button onClick={() => refreshMe()}>Refresh /me</button>
-            <button onClick={() => signOut()}>Sign out</button>
+            <button onClick={() => { signOut(); navigate("/login"); }}>Sign out</button>
           </div>
         </>
       )}
