@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useChartWidth } from "../hooks/useChartWidth";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import type { OhlcvPoint } from "../api/ohlcv";
+import { formatFinancialValue } from "../utils/formatters";
 
 type Props = {
   points: OhlcvPoint[];
@@ -37,8 +38,14 @@ export function LineCloseChart({ points, sma20, sma50 }: Props) {
             }}
             minTickGap={40}
           />
-          <YAxis domain={["auto", "auto"]} />
-          <Tooltip labelFormatter={(v) => new Date(String(v)).toLocaleString()} />
+          <YAxis domain={["auto", "auto"]} tickFormatter={(v) => formatFinancialValue(v, "price")} />
+          <Tooltip
+            labelFormatter={(v) => new Date(String(v)).toLocaleString()}
+            formatter={(value: number | undefined) => {
+              if (value === undefined) return ["", ""];
+              return [formatFinancialValue(value, "price"), ""];
+            }}
+          />
           <Legend />
 
           <Line type="monotone" dataKey="close" stroke="#3b82f6" dot={false} name="Close" />

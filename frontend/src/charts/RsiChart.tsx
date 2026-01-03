@@ -2,6 +2,7 @@
 import { useMemo, useRef } from "react";
 import { useChartWidth } from "../hooks/useChartWidth";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
+import { formatFinancialValue } from "../utils/formatters";
 
 type Props = {
   timestamps: string[];
@@ -42,8 +43,14 @@ export function RsiChart({ timestamps, rsi }: Props) {
             }}
             minTickGap={40}
           />
-          <YAxis domain={[0, 100]} />
-          <Tooltip labelFormatter={(v) => new Date(String(v)).toLocaleString()} />
+          <YAxis domain={[0, 100]} tickFormatter={(v) => formatFinancialValue(v, "rsi")} />
+          <Tooltip
+            labelFormatter={(v) => new Date(String(v)).toLocaleString()}
+            formatter={(value: number | undefined) => {
+              if (value === undefined) return ["", "RSI"];
+              return [formatFinancialValue(value, "rsi"), "RSI"];
+            }}
+          />
 
           <ReferenceLine
             y={70}
