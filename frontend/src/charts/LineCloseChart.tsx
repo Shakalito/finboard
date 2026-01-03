@@ -41,9 +41,9 @@ export function LineCloseChart({ points, sma20, sma50 }: Props) {
           <YAxis domain={["auto", "auto"]} tickFormatter={(v) => formatFinancialValue(v, "price")} />
           <Tooltip
             labelFormatter={(v) => new Date(String(v)).toLocaleString()}
-            formatter={(value: number | undefined) => {
-              if (value === undefined) return ["", ""];
-              return [formatFinancialValue(value, "price"), ""];
+            formatter={(value: number | undefined, name: string | undefined) => {
+              if (value === undefined) return ["", name ?? ""];
+              return [formatFinancialValue(value, "price"), name ?? ""];
             }}
           />
           <Legend />

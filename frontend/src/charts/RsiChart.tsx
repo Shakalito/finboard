@@ -46,9 +46,9 @@ export function RsiChart({ timestamps, rsi }: Props) {
           <YAxis domain={[0, 100]} tickFormatter={(v) => formatFinancialValue(v, "rsi")} />
           <Tooltip
             labelFormatter={(v) => new Date(String(v)).toLocaleString()}
-            formatter={(value: number | undefined) => {
-              if (value === undefined) return ["", "RSI"];
-              return [formatFinancialValue(value, "rsi"), "RSI"];
+            formatter={(value: number | undefined, name: string | undefined) => {
+              if (value === undefined) return ["", name ?? ""];
+              return [formatFinancialValue(value, "rsi"), name ?? ""];
             }}
           />
 
