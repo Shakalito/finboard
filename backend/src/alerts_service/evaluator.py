@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 from .db_models import PriceAlert
 from .schemas import AlertCondition
 
+from ..auth_service.db_models import User
+from ..notify_service.notifier import get_notifier, Notification
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -48,6 +51,8 @@ def run_alert_evaluator(db: Session) -> dict:
     skipped_no_quote = 0
     now = utc_now()
 
+    notifier = get_notifier()
+
     for a in alerts:
         q = results.get(a.listing_id)
         if q is None or q.get("price") is None:
@@ -65,6 +70,29 @@ def run_alert_evaluator(db: Session) -> dict:
                     updated_at=now,
                 )
             )
+
+
+            user_email = db.execute(
+                select(User.email).where(User.id == a.user_id)
+            ).scalar_one_or_none()
+
+            if user_email:
+                subject = "FinBoard Alert Triggered"
+                body = (
+                    f"Your price alert was triggered.\n\n"
+                    f"Listing ID: {a.listing_id}\n"
+                    f"Condition: {a.condition}\n"
+                    f"Target price: {float(a.target_price)} {a.currency}\n"
+                    f"Last price: {price} {a.currency}\n"
+                    f"Triggered at: {now.isoformat().replace('+00:00', 'Z')}\n"
+                )
+
+                try:
+                    notifier.send(Notification(to_email=user_email, subject=subject, body=body))
+                except Exception as e:
+                    print(f"FAILED TO SEND NOTIFICATION to {user_email}: {e}")
+
+
             triggered += 1
 
     db.commit()
