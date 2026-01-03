@@ -22,6 +22,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-# print(f"DEBUG_CONFIG: DB Host: {settings.db_host}")
-# print(f"DEBUG_CONFIG: DB User: {settings.db_user}")
