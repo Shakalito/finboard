@@ -438,7 +438,10 @@ async def get_my_positions(
 
     pos_stmt = (
         select(Position)
-        .where(Position.account_id == account.id)
+        .where(
+            Position.account_id == account.id,
+            Position.quantity > 0,
+        )
         .order_by(Position.instrument_id.asc())
     )
     positions = db.execute(pos_stmt).scalars().all()
