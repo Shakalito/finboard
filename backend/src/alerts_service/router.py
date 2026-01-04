@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..common.db import SessionLocal
 from ..auth_service.router import get_current_user
 from ..auth_service.db_models import User
-from ..refdata_service.db_models import Listing
+from ..refdata_service.db_models import Listing, Instrument, Venue
 from .db_models import PriceAlert
 from .schemas import AlertCreate, AlertRead, AlertUpdate
 
@@ -28,6 +28,33 @@ def ensure_listing_exists(db: Session, listing_id: UUID) -> None:
     if exists_ is None:
         raise HTTPException(status_code=404, detail="Listing not found")
 
+def get_listing_currency(db: Session, listing_id: UUID) -> str:
+    stmt = select(Listing.currency).where(Listing.id == listing_id)
+    cur = db.execute(stmt).scalar_one_or_none()
+    if cur is None:
+        return "USD"
+    return cur
+
+def to_alert_read(db: Session, alert: PriceAlert) -> AlertRead:
+    row = db.execute(
+        select(
+            PriceAlert,
+            Listing.ticker,
+            Instrument.name,
+            Venue.code,
+        )
+        .join(Listing, Listing.id == PriceAlert.listing_id)
+        .join(Instrument, Instrument.id == Listing.instrument_id)
+        .join(Venue, Venue.id == Listing.venue_id)
+        .where(PriceAlert.id == alert.id)
+    ).one()
+
+    a, ticker, name, venue_code = row
+    out = AlertRead.model_validate(a)
+    out.ticker = ticker
+    out.name = name
+    out.venue_code = venue_code
+    return out
 
 @router.post("", response_model=AlertRead, status_code=status.HTTP_201_CREATED)
 def create_alert(
@@ -42,13 +69,13 @@ def create_alert(
         listing_id=payload.listing_id,
         condition=payload.condition,
         target_price=payload.target_price,
-        currency=payload.currency,
+        currency=get_listing_currency(db, payload.listing_id),
         is_active=True,
     )
     db.add(alert)
     db.commit()
     db.refresh(alert)
-    return AlertRead.model_validate(alert)
+    return to_alert_read(db, alert)
 
 
 @router.get("/me", response_model=list[AlertRead])
@@ -58,15 +85,33 @@ def list_my_alerts(
     current_user: User = Depends(get_current_user),
 ):
     stmt = (
-        select(PriceAlert)
+        select(
+            PriceAlert,
+            Listing.ticker,
+            Instrument.name,
+            Venue.code,
+        )
+        .join(Listing, Listing.id == PriceAlert.listing_id)
+        .join(Instrument, Instrument.id == Listing.instrument_id)
+        .join(Venue, Venue.id == Listing.venue_id)
         .where(PriceAlert.user_id == current_user.id)
         .order_by(desc(PriceAlert.created_at))
     )
     if active is not None:
         stmt = stmt.where(PriceAlert.is_active.is_(active))
 
-    rows = db.execute(stmt).scalars().all()
-    return [AlertRead.model_validate(x) for x in rows]
+    rows = db.execute(stmt).all()
+
+    results: list[AlertRead] = []
+
+    for alert, ticker, name, venue_code in rows:
+        a = AlertRead.model_validate(alert)
+        a.ticker = ticker
+        a.name = name
+        a.venue_code = venue_code
+        results.append(a)
+
+    return results
 
 
 @router.patch("/{alert_id}", response_model=AlertRead)
@@ -89,7 +134,7 @@ def update_alert(
 
     db.commit()
     db.refresh(alert)
-    return AlertRead.model_validate(alert)
+    return to_alert_read(db, alert)
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)

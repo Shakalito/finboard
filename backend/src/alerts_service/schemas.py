@@ -14,7 +14,7 @@ class AlertCreate(BaseModel):
     listing_id: UUID
     condition: AlertCondition
     target_price: float = Field(..., gt=0)
-    currency: str = Field(default="USD", min_length=3, max_length=10)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$", description="ISO Currency code")
 
 
 class AlertRead(BaseModel):
@@ -28,6 +28,9 @@ class AlertRead(BaseModel):
     last_triggered_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    ticker: str | None = None
+    name: str | None = None
+    venue_code: str | None = None
 
     class Config:
         from_attributes = True

@@ -50,6 +50,7 @@ export function WatchlistPage() {
       <h2>My watchlist</h2>
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <a href="/listings">Search listings</a>
+        <a href="/alerts">Alerts</a>
         <a href="/me">Me</a>
         <button onClick={() => reload()} disabled={!items.length}>
           Refresh quotes
