@@ -438,3 +438,41 @@ CREATE TABLE backtest.backtest_metrics (
     CONSTRAINT fk_backtest_metrics_backtest
         FOREIGN KEY (backtest_id) REFERENCES backtest.backtests(id)
 );
+
+
+------------------------------------------------------------
+-- ALERTS-SERVICE (schema: alerts)
+------------------------------------------------------------
+
+CREATE SCHEMA IF NOT EXISTS alerts;
+
+CREATE TABLE IF NOT EXISTS alerts.price_alerts (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL,
+    listing_id      UUID NOT NULL,
+    condition       VARCHAR(8) NOT NULL,
+    target_price    NUMERIC(18,8) NOT NULL,
+    currency        VARCHAR(10) NOT NULL DEFAULT 'USD',
+    is_active       BOOLEAN NOT NULL DEFAULT true,
+    last_triggered_at TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_price_alerts_user
+        FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+
+    CONSTRAINT fk_price_alerts_listing
+        FOREIGN KEY (listing_id) REFERENCES refdata.listings(id) ON DELETE CASCADE,
+
+    CONSTRAINT chk_price_alerts_condition
+        CHECK (condition IN ('ABOVE', 'BELOW'))
+);
+
+CREATE INDEX IF NOT EXISTS price_alerts_user_active_idx
+    ON alerts.price_alerts (user_id, is_active, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS price_alerts_active_idx
+    ON alerts.price_alerts (is_active, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS price_alerts_listing_idx
+    ON alerts.price_alerts (listing_id);

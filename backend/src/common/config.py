@@ -20,8 +20,16 @@ class Settings(BaseSettings):
         extra='ignore'
     )
 
+    # notifications
+    notify_backend: str = "console"  # console|smtp
+
+    # SMTP (optional)
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_use_tls: bool = True
+
 
 settings = Settings()
-
-# print(f"DEBUG_CONFIG: DB Host: {settings.db_host}")
-# print(f"DEBUG_CONFIG: DB User: {settings.db_user}")

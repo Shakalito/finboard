@@ -11,6 +11,10 @@ import { PortfolioOrdersPage } from "../pages/PortfolioOrdersPage";
 import { PortfolioDepositPage } from "../pages/PortfolioDepositPage";
 import { PortfolioExecutionsPage } from "../pages/PortfolioExecutionsPage";
 
+import { AlertsPage } from "../pages/AlertsPage";
+import { NewAlertPage } from "../pages/NewAlertPage";
+
+
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/me" replace /> },
@@ -26,4 +30,7 @@ export const router = createBrowserRouter([
   { path: "/portfolio/orders", element: <PortfolioOrdersPage /> },
   { path: "/portfolio/deposit", element: <PortfolioDepositPage /> },
   { path: "/portfolio/executions", element: <PortfolioExecutionsPage /> },
+
+  { path: "/alerts", element: <AlertsPage /> },
+  { path: "/alerts/new", element: <NewAlertPage /> },
 ]);
