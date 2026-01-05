@@ -49,13 +49,23 @@ def run_alert_evaluator(db: Session) -> dict:
 
     triggered = 0
     skipped_no_quote = 0
+    skipped_missing_price = 0
+    skipped_quote_error = 0
     now = utc_now()
 
     notifier = get_notifier()
 
     for a in alerts:
         q = results.get(a.listing_id)
+        
+        # Check specific failure reasons
+        if a.listing_id in errors:
+            skipped_quote_error += 1
+            skipped_no_quote += 1
+            continue
+            
         if q is None or q.get("price") is None:
+            skipped_missing_price += 1
             skipped_no_quote += 1
             continue
 
@@ -101,5 +111,7 @@ def run_alert_evaluator(db: Session) -> dict:
         "checked": len(alerts),
         "triggered": triggered,
         "skipped_no_quote": skipped_no_quote,
+        "skipped_missing_price": skipped_missing_price,
+        "skipped_quote_error": skipped_quote_error,
         "errors": {str(k): v for k, v in errors.items()},
     }
