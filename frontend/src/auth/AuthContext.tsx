@@ -10,7 +10,7 @@ type AuthState = {
 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
-  refreshMe: () => Promise<void>;
+  refreshMe: (token?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -21,21 +21,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function refreshMe() {
-    if (!tokenState) {
+  async function refreshMe(currentToken?: string) {
+    const t = currentToken ?? tokenState;
+    if (!t) {
       setUser(null);
       return;
     }
-    const u = await apiMe(tokenState);
+    // We don't set isLoading(true) here because it might be a background refresh
+    const u = await apiMe(t);
     setUser(u);
   }
 
   async function signIn(email: string, password: string) {
+    setIsLoading(true);
     setError(null);
-    const res = await apiLogin({ email, password });
-    setToken(res.access_token);
-    setTokenState(res.access_token);
-    await refreshMe();
+    try {
+      const res = await apiLogin({ email, password });
+      setToken(res.access_token);
+      setTokenState(res.access_token);
+      await refreshMe(res.access_token);
+    } catch (e) {
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function signOut() {

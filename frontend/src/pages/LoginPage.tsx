@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, token } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("jan@example.com");
   const [password, setPassword] = useState("password123");
   const [err, setErr] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(location.state?.message || null);
+
+  const from = location.state?.from?.pathname || "/me";
+
+  useEffect(() => {
+    if (token) {
+      navigate(from, { replace: true });
+    }
+  }, [token, navigate, from]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    setMsg(null);
     try {
       await signIn(email, password);
-      setMsg("OK. Logged in. Go to /me");
+      navigate(from, { replace: true });
     } catch (e: any) {
+      setMsg(null);
       setErr(e?.message ?? "Login error");
     }
   }

@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { RequireAuth } from "../auth/RequireAuth";
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { MePage } from "../pages/MePage";
@@ -20,17 +21,80 @@ export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/me" replace /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/register", element: <RegisterPage /> },
-  { path: "/me", element: <MePage /> },
+  {
+    path: "/me",
+    element: (
+      <RequireAuth>
+        <MePage />
+      </RequireAuth>
+    ),
+  },
 
   { path: "/listings", element: <ListingsPage /> },
-  { path: "/watchlist", element: <WatchlistPage /> },
-  { path: "/chart/:listingId", element: <ChartPage /> },
+  {
+    path: "/watchlist",
+    element: (
+      <RequireAuth>
+        <WatchlistPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/chart/:listingId",
+    element: (
+      <RequireAuth>
+        <ChartPage />
+      </RequireAuth>
+    ),
+  },
 
-  { path: "/portfolio", element: <PortfolioPage /> },
-  { path: "/portfolio/orders", element: <PortfolioOrdersPage /> },
-  { path: "/portfolio/deposit", element: <PortfolioDepositPage /> },
-  { path: "/portfolio/executions", element: <PortfolioExecutionsPage /> },
 
-  { path: "/alerts", element: <AlertsPage /> },
-  { path: "/alerts/new", element: <NewAlertPage /> },
+  {
+    path: "/portfolio",
+    element: (
+      <RequireAuth>
+        <PortfolioPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/portfolio/orders",
+    element: (
+      <RequireAuth>
+        <PortfolioOrdersPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/portfolio/deposit",
+    element: (
+      <RequireAuth>
+        <PortfolioDepositPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/portfolio/executions",
+    element: (
+      <RequireAuth>
+        <PortfolioExecutionsPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/alerts",
+    element: (
+      <RequireAuth>
+        <AlertsPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/alerts/new",
+    element: (
+      <RequireAuth>
+        <NewAlertPage />
+      </RequireAuth>
+    ),
+  },
 ]);
