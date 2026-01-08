@@ -8,6 +8,7 @@ from .refdata_service.router import router as refdata_router
 from .watchlist_service.router import router as watchlist_router
 from .marketdata_service.router import router as marketdata_router
 from .portfolio_service.router import router as portfolio_router
+from .alerts_service.router import router as alerts_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,7 +33,7 @@ app.include_router(refdata_router, prefix="/refdata", tags=["refdata"])
 app.include_router(watchlist_router, prefix="/watchlist", tags=["watchlist"])
 app.include_router(marketdata_router, prefix="/marketdata", tags=["marketdata"])
 app.include_router(portfolio_router, prefix="/portfolio", tags=["portfolio"])
-
+app.include_router(alerts_router, prefix="/alerts", tags=["alerts"])
 
 app.add_middleware(
     CORSMiddleware,

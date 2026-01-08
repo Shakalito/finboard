@@ -12,6 +12,10 @@ import { PortfolioOrdersPage } from "../pages/PortfolioOrdersPage";
 import { PortfolioDepositPage } from "../pages/PortfolioDepositPage";
 import { PortfolioExecutionsPage } from "../pages/PortfolioExecutionsPage";
 
+import { AlertsPage } from "../pages/AlertsPage";
+import { NewAlertPage } from "../pages/NewAlertPage";
+
+
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/me" replace /> },
@@ -44,6 +48,7 @@ export const router = createBrowserRouter([
     ),
   },
 
+
   {
     path: "/portfolio",
     element: (
@@ -73,6 +78,22 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <PortfolioExecutionsPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/alerts",
+    element: (
+      <RequireAuth>
+        <AlertsPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/alerts/new",
+    element: (
+      <RequireAuth>
+        <NewAlertPage />
       </RequireAuth>
     ),
   },

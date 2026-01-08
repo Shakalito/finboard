@@ -172,6 +172,7 @@ export function PortfolioPage() {
         <Link to="/portfolio/orders">Orders</Link>
         <Link to="/portfolio/executions">Executions</Link>
         <Link to="/portfolio/deposit">Deposit</Link>
+        <Link to="/alerts">Alerts</Link>
         <button onClick={() => refreshAll()} disabled={loading}>
           Refresh
         </button>
