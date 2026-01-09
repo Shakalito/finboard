@@ -28,27 +28,30 @@ def fetch_quotes_batch(db: Session, listing_ids: list[UUID]) -> dict:
     rows = db.execute(stmt).all()
     by_id: dict[UUID, tuple] = {l.id: (l, i, v) for (l, i, v) in rows}
 
-    results: dict[UUID, dict | None] = {}
-    errors: dict[UUID, str] = {}
+    results: dict[str, dict | None] = {} 
+    errors: dict[str, str] = {}
 
     for lid in listing_ids:
+        str_lid = str(lid)
+
         if lid not in by_id:
-            results[lid] = None
-            errors[lid] = "Listing not found"
+            results[str_lid] = None
+            errors[str_lid] = "Listing not found"
             continue
 
         listing, instrument, venue = by_id[lid]
         if not listing.ticker:
-            results[lid] = None
-            errors[lid] = "Listing has no ticker configured"
+            results[str_lid] = None
+            errors[str_lid] = "Listing has no ticker configured"
             continue
 
         try:
             raw = client.fetch_quote(symbol=listing.ticker)
             validated = FinnhubQuoteRaw.model_validate(raw)
 
-            results[lid] = {
-                "listing_id": str(lid),
+           
+            results[str_lid] = {
+                "listing_id": str_lid, 
                 "instrument_id": str(instrument.id),
                 "venue_id": str(venue.id),
                 "ticker": listing.ticker,
@@ -62,7 +65,7 @@ def fetch_quotes_batch(db: Session, listing_ids: list[UUID]) -> dict:
                 else None,
             }
         except Exception as e:
-            results[lid] = None
-            errors[lid] = str(e)
+            results[str_lid] = None
+            errors[str_lid] = str(e)
 
     return {"results": results, "errors": errors}

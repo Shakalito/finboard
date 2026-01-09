@@ -54,7 +54,7 @@ def run_alert_evaluator(db: Session) -> dict:
     notifier = get_notifier()
 
     for a in alerts:
-        q = results.get(a.listing_id)
+        q = results.get(str(a.listing_id))
         if q is None or q.get("price") is None:
             skipped_no_quote += 1
             continue
@@ -101,5 +101,5 @@ def run_alert_evaluator(db: Session) -> dict:
         "checked": len(alerts),
         "triggered": triggered,
         "skipped_no_quote": skipped_no_quote,
-        "errors": {str(k): v for k, v in errors.items()},
+        "errors": errors,
     }
