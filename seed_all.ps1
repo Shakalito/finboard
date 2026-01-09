@@ -3,7 +3,7 @@ param (
     [int]$Limit = 0
 )
 
-Write-Host ">>> STEP 1: Loading RefData..." -ForegroundColor Cyan
+Write-Host ">>> STEP 1: Seeding RefData..." -ForegroundColor Cyan
 cmd /c "docker exec -i gielda-db psql -U admin -d gielda < db/seed_refdata.sql"
 cmd /c "docker exec -i gielda-db psql -U admin -d gielda < db/seed_refdata.sql"
 

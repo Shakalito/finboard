@@ -20,12 +20,22 @@ docker compose down
 docker compose up -d
 ```
 
-## Backend
-Open a second terminal in the /backend directory:
+## Data Initialization (seeding)
+Open a second, PowerShell terminal in the backend directory (`/finboard/backend`)
+
 ### Activate Virtual Environment
 ```powershell
 .\.venv\Scripts\Activate
 ```
+
+go to main directory with `cd ..`
+### Run script
+```powershell
+.\seed_all.ps1
+```
+
+## Backend
+Go back to `/finboard/backend` with PowerShell terminal
 
 ### Run Development Server
 ```powershell
@@ -35,7 +45,7 @@ The API will be available at: http://localhost:8000
 
 
 ## Frontend
-Open a third terminal in the /frontend directory:
+Open third terminal in the `/frontend directory`
 ### Install Dependencies & run application
 ```powershell
 npm install
@@ -46,27 +56,6 @@ npm run dev
 
 The dashboard will be available at: http://localhost:5173
 
-## Data Initialization (seeding)
-Open a fourth terminal in the root directory (/finboard), ensure your Python virtual environment is active, and follow these steps:
-
-#### Import Reference Data (Venues and Listings)
-```powershell
-cmd /c "docker exec -i gielda-db psql -U admin -d gielda < db/seed_refdata.sql"
-```
-
-#### Fetch Historical Data (OHLCV) for Specific Tickers
-First, check for available listing_id values (e.g., for companies on NASDAQ):
-```sql
-SELECT l.id, l.ticker FROM refdata.listings l 
-JOIN refdata.venues v ON v.id = l.venue_id 
-WHERE v.code='NASDAQ' ORDER BY l.ticker;
-```
-
-Next, fetch historical data by replacing <ID> with your copied identifier:
-```powershell
-$env:PYTHONPATH='backend'
-python backend/scripts/seed_yahoo_ohlcv.py --listing-id <ID> --period 5y --replace
-```
 
 
 
