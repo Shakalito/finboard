@@ -31,7 +31,7 @@ Open a second, PowerShell terminal in the backend directory (`/finboard/backend`
 go to main directory with `cd ..`
 ### Run script
 ```powershell
-.\seed_all.ps1
+.\seed_OHLCV.ps1
 ```
 
 ## Backend
