@@ -40,11 +40,6 @@ export function Footer() {
 
   return (
     <footer style={footerStyle}>
-      <div style={linkContainerStyle}>
-        {/* <Link to="#" style={linkStyle}>Privacy Policy</Link>
-        <Link to="#" style={linkStyle}>Terms of Service</Link>
-        <Link to="#" style={linkStyle}>Support</Link> */}
-      </div>
       <div style={textStyle}>
         &copy; {new Date().getFullYear()} FINBOARD PRO. All rights reserved.<br/>
         Market data provided for simulation purposes only.
