@@ -13,7 +13,7 @@ function fmtDate(iso: string | null) {
 }
 
 export function AlertsPage() {
-  const { token } = useAuth(); // Removed unused signOut, user, navigate
+  const { token } = useAuth(); 
 
   const [items, setItems] = useState<AlertRead[]>([]);
   const [filter, setFilter] = useState<Filter>("active");
@@ -78,7 +78,7 @@ export function AlertsPage() {
     }
   }
 
-  // --- STYLES ---
+
   const pageWrapperStyle: CSSProperties = {
     minHeight: "100vh",
     backgroundColor: "#131722",

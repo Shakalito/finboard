@@ -33,11 +33,11 @@ export function RegisterPage() {
     minHeight: "100vh",
     backgroundColor: "#131722",
     display: "flex",
-    flexDirection: "column", // Ważne dla stopki
-    // Usunięto alignItems/justifyContent: center, bo robimy margin: auto na kontenerze
+    flexDirection: "column",
+  
     color: "#d1d4dc",
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
-    padding: "24px", // Padding dla wrapa
+    padding: "24px", 
     boxSizing: "border-box",
   };
 
@@ -50,8 +50,8 @@ export function RegisterPage() {
     borderRadius: "4px",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
     border: "1px solid #2a2e39",
-    margin: "auto", // Centruje w pionie i poziomie, zostawiając miejsce na stopkę
-    marginBottom: "40px", // Odstęp od stopki
+    margin: "auto", 
+    marginBottom: "40px", 
   };
 
   const headerStyle: React.CSSProperties = {

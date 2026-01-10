@@ -52,7 +52,7 @@ export function PortfolioDepositPage() {
     }
   }
 
-  // --- STYLES ---
+
   const pageWrapperStyle: CSSProperties = {
     minHeight: "100vh",
     backgroundColor: "#131722",
@@ -64,8 +64,8 @@ export function PortfolioDepositPage() {
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
     color: "#d1d4dc",
     display: 'flex',
-    flexDirection: 'column', // Changed to column for footer
-    // removed justifyContent: center to allow margin auto on panel
+    flexDirection: 'column', 
+   
   };
 
   const panelStyle: CSSProperties = {
@@ -79,8 +79,8 @@ export function PortfolioDepositPage() {
     display: "flex",
     flexDirection: "column",
     gap: "20px",
-    margin: "0 auto", // Center the panel
-    marginBottom: "40px" // Space from footer
+    margin: "0 auto", 
+    marginBottom: "40px" 
   };
 
   const headerTitleStyle: CSSProperties = {

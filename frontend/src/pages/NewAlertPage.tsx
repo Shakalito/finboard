@@ -8,7 +8,7 @@ import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 
 export function NewAlertPage() {
-  const { token } = useAuth(); // Removed signOut, user - now handled by Header
+  const { token } = useAuth(); 
   const navigate = useNavigate();
 
   const [selectedListing, setSelectedListing] = useState<ListingSummary | null>(null);
@@ -76,7 +76,7 @@ export function NewAlertPage() {
     color: "#d1d4dc",
     display: 'flex',
     flexDirection: 'column',
-    // Removed justifyContent: center to allow margin auto on panel
+
   };
 
   const panelStyle: CSSProperties = {
@@ -90,8 +90,8 @@ export function NewAlertPage() {
     display: "flex",
     flexDirection: "column",
     gap: "20px",
-    margin: "0 auto", // Center the panel
-    marginBottom: "40px" // Space from footer
+    margin: "0 auto",
+    marginBottom: "40px" 
   };
 
   const headerTitleStyle: CSSProperties = {

@@ -39,8 +39,8 @@ export function LoginPage() {
     minHeight: "100vh",
     backgroundColor: "#131722",
     display: "flex",
-    flexDirection: "column", // Ważne dla stopki
-    color: "#000000ff", // To chyba błąd w Twoim kodzie (czarny tekst na ciemnym tle?), ale zostawiam jak było, choć sugeruję #d1d4dc
+    flexDirection: "column", 
+    color: "#000000ff", 
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
     padding: "24px",
     boxSizing: "border-box",
@@ -55,7 +55,7 @@ export function LoginPage() {
     borderRadius: "4px",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
     border: "1px solid #2a2e39",
-    margin: "auto", // Centrowanie
+    margin: "auto", 
     marginBottom: "40px",
   };
 
