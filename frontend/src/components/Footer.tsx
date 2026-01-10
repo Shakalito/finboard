@@ -1,5 +1,4 @@
 import { type CSSProperties } from "react";
-import { Link } from "react-router-dom";
 
 export function Footer() {
   const footerStyle: CSSProperties = {
