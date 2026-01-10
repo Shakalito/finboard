@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { Header } from "../components/Header";
+import { Footer } from "../components/Footer";
 import {
   createPaperAccount,
   deposit,
@@ -28,7 +30,6 @@ function fmtNum(v: number | null | undefined) {
 
 export function PortfolioPage() {
   const { token } = useAuth();
-
   const [account, setAccount] = useState<AccountRead | null>(null);
   const [cash, setCash] = useState<number | null>(null);
   const [positions, setPositions] = useState<PositionRead[]>([]);
@@ -43,6 +44,7 @@ export function PortfolioPage() {
   const [selectedListing, setSelectedListing] = useState<ListingSummary | null>(null);
   const [qty, setQty] = useState<string>("1");
   const [tradeBusy, setTradeBusy] = useState(false);
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
   const canUseApi = useMemo(() => !!token, [token]);
 
@@ -83,7 +85,6 @@ export function PortfolioPage() {
       return;
     }
     refreshAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   async function onDepositClick() {
@@ -141,7 +142,6 @@ export function PortfolioPage() {
       });
 
       setMsg(`${side} order created successfully.`);
-      //setSelectedListing(null)
       await refreshAll();
     } catch (e: any) {
       setErr(e?.message ?? "Order error");
@@ -150,205 +150,289 @@ export function PortfolioPage() {
     }
   }
 
+  const pageWrapperStyle: CSSProperties = {
+    minHeight: "100vh",
+    backgroundColor: "#131722",
+    paddingTop: "24px",
+    paddingBottom: "40px",
+    paddingLeft: "24px",
+    paddingRight: "24px",
+    boxSizing: "border-box",
+    fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+    color: "#d1d4dc",
+    display: "flex",
+    flexDirection: "column",
+  };
+
+  const panelStyle: CSSProperties = {
+    backgroundColor: "#1e222d",
+    borderRadius: "6px",
+    border: "1px solid #2a2e39",
+    padding: "20px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  };
+
+  const headerTitleStyle: CSSProperties = {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#ffffff",
+    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  };
+
+  const inputStyle: CSSProperties = {
+    padding: "10px 12px",
+    fontSize: "14px",
+    backgroundColor: "#131722",
+    border: "1px solid #434651",
+    borderRadius: "4px",
+    color: "#ffffff",
+    boxSizing: "border-box",
+    outline: "none",
+    width: "100%",
+  };
+
+  const btnStyle = (variant: 'green' | 'red' | 'gray', isHover: boolean): CSSProperties => {
+    let bg = "#2a2e39";
+    let color = "#d1d4dc";
+    let border = "none";
+
+    if (variant === 'green') {
+      bg = isHover ? "#20ad53" : "#26cc62";
+      color = "#ffffff";
+    } else if (variant === 'red') {
+      bg = isHover ? "#ff3333" : "#ff4d4d";
+      color = "#ffffff";
+    } else {
+      bg = isHover ? "#3a3f4e" : "#2a2e39";
+    }
+
+    return {
+      padding: "10px 16px",
+      fontSize: "14px",
+      fontWeight: 600,
+      cursor: "pointer",
+      backgroundColor: bg,
+      color: color,
+      border: border,
+      borderRadius: "4px",
+      transition: "background-color 0.2s",
+      textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    };
+  };
+
+  const sideBtnStyle = (btnSide: Side): CSSProperties => ({
+    flex: 1,
+    padding: "12px",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: "14px",
+    border: "none",
+    borderRadius: "4px",
+    backgroundColor: side === btnSide 
+      ? (btnSide === "BUY" ? "#26cc62" : "#ff4d4d") 
+      : "#2a2e39",
+    color: side === btnSide ? "#ffffff" : "#8d929b",
+    transition: "all 0.2s",
+  });
+
+  const tableHeaderStyle: CSSProperties = {
+    textAlign: "left",
+    padding: "12px 10px",
+    borderBottom: "2px solid #2a2e39",
+    color: "#8d929b",
+    fontSize: "12px",
+    fontWeight: 600,
+    textTransform: "uppercase",
+  };
+
+  const tableCellStyle: CSSProperties = {
+    padding: "12px 10px",
+    borderBottom: "1px solid #2a2e39",
+    color: "#d1d4dc",
+    fontSize: "13px",
+  };
+
+  const gridContainerStyle: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr", 
+    gap: "24px",
+    marginBottom: "24px",
+  };
+
   if (!token) {
     return (
-      <div style={{ padding: 24, maxWidth: 1100 }}>
-        <h2>Portfolio</h2>
-        <p style={{ color: "crimson" }}>You must be logged in to view portfolio.</p>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Link to="/login">Login</Link>
-          <Link to="/me">Me</Link>
+      <>
+        <Header activeTab="none" />
+        <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
+             <p style={{color: '#8d929b', marginBottom: '20px'}}>Musisz się zalogować, aby zobaczyć portfel.</p>
+             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold'}}>Zaloguj się</Link>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
-      <h2>Portfolio</h2>
+    <>
+      <Header activeTab="dashboard" refreshAction={refreshAll} refreshLoading={loading} />
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-        <Link to="/watchlist">Watchlist</Link>
-        <Link to="/portfolio/orders">Orders</Link>
-        <Link to="/portfolio/executions">Executions</Link>
-        <Link to="/portfolio/deposit">Deposit</Link>
-        <Link to="/alerts">Alerts</Link>
-        <button onClick={() => refreshAll()} disabled={loading}>
-          Refresh
-        </button>
-      </div>
+      <div style={pageWrapperStyle}>
+        
+        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
+        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
 
-      {msg && <p>{msg}</p>}
-      {err && <p style={{ color: "crimson" }}>{err}</p>}
+        <div style={gridContainerStyle}>
+          
+          <div style={panelStyle}>
+            <div style={headerTitleStyle}>Account Summary</div>
+            
+            {!account && <div style={{color: '#8d929b'}}>Loading account details...</div>}
+            
+            {account && (
+              <>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
+                  <div>
+                    <div style={{fontSize: '12px', color: '#8d929b', marginBottom: '4px'}}>AVAILABLE CASH</div>
+                    <div style={{fontSize: '32px', fontWeight: 700, color: '#ffffff'}}>
+                      {cash == null ? "—" : fmtMoney(cash)} <span style={{fontSize: '16px', color: '#8d929b'}}>{account.base_currency}</span>
+                    </div>
+                  </div>
+                  <div style={{fontSize: '12px', color: '#8d929b'}}>ID: {account.id.substring(0, 8)}...</div>
+                </div>
 
-      <div style={{ display: "grid", gap: 12 }}>
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            padding: 12,
-            display: "grid",
-            gap: 6,
-          }}
-        >
-          <div style={{ fontWeight: 700 }}>Account</div>
-          {!account && <div>Loading account...</div>}
-          {account && (
-            <>
-              <div style={{ fontSize: 13, opacity: 0.85 }}>id: {account.id}</div>
+                <div style={{height: '1px', background: '#2a2e39', margin: '4px 0'}}></div>
+
+                <div style={{display: 'flex', gap: '10px', alignItems: 'flex-end'}}>
+                  <div style={{flex: 1}}>
+                    <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Quick Deposit</label>
+                    <input
+                      value={depAmount}
+                      onChange={(e) => setDepAmount(e.target.value)}
+                      placeholder="Amount"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => onDepositClick()} 
+                    disabled={loading}
+                    style={btnStyle('gray', hoveredBtn === 'deposit')}
+                    onMouseEnter={() => setHoveredBtn('deposit')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                  >
+                    DEPOSIT
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={panelStyle}>
+            <div style={headerTitleStyle}>New Order</div>
+            
+            <div style={{display: 'flex', gap: '10px'}}>
+              <button onClick={() => setSide("BUY")} disabled={tradeBusy} style={sideBtnStyle("BUY")}>BUY</button>
+              <button onClick={() => setSide("SELL")} disabled={tradeBusy} style={sideBtnStyle("SELL")}>SELL</button>
+            </div>
+
+            <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px'}}>
               <div>
-                Cash balance:{" "}
-                <b>
-                  {cash == null ? "—" : fmtMoney(cash)} {account.base_currency}
-                </b>
+                <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Asset</label>
+                <div style={{ height: '40px' }}>
+                    <ListingDropdown value={selectedListing} onChange={setSelectedListing} />
+                </div>
               </div>
-
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+              <div>
+                <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Volume</label>
                 <input
-                  value={depAmount}
-                  onChange={(e) => setDepAmount(e.target.value)}
-                  placeholder="Deposit amount"
-                  style={{ width: 160 }}
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  placeholder="Lots"
+                  style={{...inputStyle, height: '40px'}}
+                  disabled={tradeBusy || !canUseApi}
                 />
-                <button onClick={() => onDepositClick()} disabled={loading}>
-                  Deposit
-                </button>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>
-                  Tip: base currency = {account.base_currency}
-                </span>
               </div>
-            </>
-          )}
-        </div>
-
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ fontWeight: 700 }}>Trade</div>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                onClick={() => setSide("BUY")}
-                disabled={tradeBusy}
-                style={{
-                  fontWeight: side === "BUY" ? 700 : 400,
-                }}
-              >
-                BUY
-              </button>
-              <button
-                onClick={() => setSide("SELL")}
-                disabled={tradeBusy}
-                style={{
-                  fontWeight: side === "SELL" ? 700 : 400,
-                }}
-              >
-                SELL
-              </button>
             </div>
 
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.8 }}>
-                Listing (select by ticker/name)
-              </div>
-              <ListingDropdown value={selectedListing} onChange={setSelectedListing} />
-            </div>
-
-
-            <input
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder="qty"
-              style={{ width: 120 }}
-              disabled={tradeBusy || !canUseApi}
-            />
-
-            <button onClick={() => onTradeClick()} disabled={tradeBusy || !account}
-            style={{
-              padding: "8px 16px",
-              cursor: (tradeBusy || !selectedListing?.id) ? "not-allowed" : "pointer",
-              backgroundColor: side === "BUY" ? "#e8f5e9" : "#ffebee",
-              border: "1px solid #ccc",
-              borderRadius: "4px"
-            }}>
-              {tradeBusy ? "Submitting..." : "Submit"}
+            <button 
+              onClick={() => onTradeClick()} 
+              disabled={tradeBusy || !account}
+              style={{
+                ...btnStyle(side === "BUY" ? 'green' : 'red', hoveredBtn === 'trade'),
+                marginTop: 'auto'
+              }}
+              onMouseEnter={() => setHoveredBtn('trade')}
+              onMouseLeave={() => setHoveredBtn(null)}
+            >
+              {tradeBusy ? "PROCESSING..." : `PLACE ${side} ORDER`}
             </button>
           </div>
         </div>
 
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            padding: 12,
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Positions</div>
-
-          {loading && <div>Loading...</div>}
-          {!loading && positions.length === 0 && <div>No positions.</div>}
+        <div style={panelStyle}>
+          <div style={headerTitleStyle}>Open Positions</div>
+          
+          {loading && <div style={{color: '#8d929b', padding: '20px'}}>Loading data...</div>}
+          {!loading && positions.length === 0 && <div style={{color: '#8d929b', padding: '20px', textAlign: 'center'}}>No open positions</div>}
 
           {!loading && positions.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    <th style={th}>Ticker</th>
-                    <th style={th}>Name</th>
-                    <th style={th}>Venue</th>
-                    <th style={th}>Qty</th>
-                    <th style={th}>Avg</th>
-                    <th style={th}>Last</th>
-                    <th style={th}>Value</th>
-                    <th style={th}>PnL</th>
-                    <th style={th}>PnL %</th>
-                    <th style={th}>As of</th>
+                    <th style={tableHeaderStyle}>Instrument</th>
+                    <th style={tableHeaderStyle}>Name</th>
+                    <th style={tableHeaderStyle}>Venue</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Volume</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Open Price</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Market Price</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Value</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>P&L</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Net %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Time</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((p) => (
-                    <tr key={p.position_id}>
-                      <td style={td}>{p.ticker ?? "—"}</td>
-                      <td style={td}>{p.name}</td>
-                      <td style={td}>{p.venue_code}</td>
-                      <td style={td}>{fmtNum(p.qty)}</td>
-                      <td style={td}>{fmtMoney(p.avg_price)}</td>
-                      <td style={td}>{fmtMoney(p.last_price)}</td>
-                      <td style={td}>{fmtMoney(p.market_value)}</td>
-                      <td style={td}>{fmtMoney(p.unrealized_pnl_abs)}</td>
-                      <td style={td}>
-                        {p.unrealized_pnl_pct == null ? "—" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
-                      </td>
-                      <td style={td}>{p.asof ? new Date(p.asof).toLocaleString() : "—"}</td>
-                    </tr>
-                  ))}
+                  {positions.map((p) => {
+                    const pnl = p.unrealized_pnl_abs || 0;
+                    const pnlColor = pnl >= 0 ? "#26cc62" : "#ff4d4d";
+                    
+                    return (
+                      <tr key={p.position_id}>
+                        <td style={{...tableCellStyle, fontWeight: 700, color: '#fff'}}>{p.ticker ?? "—"}</td>
+                        <td style={tableCellStyle}>{p.name}</td>
+                        <td style={tableCellStyle}>{p.venue_code}</td>
+                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtNum(p.qty)}</td>
+                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.avg_price)}</td>
+                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.last_price)}</td>
+                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.market_value)}</td>
+                        <td style={{...tableCellStyle, textAlign: 'right', color: pnlColor, fontWeight: 600}}>
+                          {pnl > 0 ? "+" : ""}{fmtMoney(pnl)}
+                        </td>
+                        <td style={{...tableCellStyle, textAlign: 'right', color: pnlColor}}>
+                          {p.unrealized_pnl_pct == null ? "—" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
+                        </td>
+                        <td style={{...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px'}}>
+                           {p.asof ? new Date(p.asof).toLocaleTimeString() : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
+
+        <Footer />
       </div>
-    </div>
+    </>
   );
 }
-
-const th: CSSProperties = {
-  textAlign: "left",
-  padding: "10px 8px",
-  borderBottom: "1px solid #ddd",
-  fontWeight: 700,
-  fontSize: 13,
-};
-
-const td: CSSProperties = {
-  padding: "10px 8px",
-  borderBottom: "1px solid #eee",
-  fontSize: 13,
-};

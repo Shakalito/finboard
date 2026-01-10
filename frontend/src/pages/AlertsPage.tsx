@@ -2,6 +2,8 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { deleteAlert, getMyAlerts, setAlertActive, type AlertRead } from "../api/alerts";
+import { Header } from "../components/Header";
+import { Footer } from "../components/Footer";
 
 type Filter = "active" | "inactive" | "all";
 
@@ -11,12 +13,14 @@ function fmtDate(iso: string | null) {
 }
 
 export function AlertsPage() {
-  const { token } = useAuth();
+  const { token } = useAuth(); // Removed unused signOut, user, navigate
+
   const [items, setItems] = useState<AlertRead[]>([]);
   const [filter, setFilter] = useState<Filter>("active");
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   async function load() {
     setErr(null);
@@ -46,15 +50,15 @@ export function AlertsPage() {
     if (!token) return;
     setErr(null);
     setMsg(null);
-    setLoading(true);
+    setActionLoadingId(a.id);
     try {
       await setAlertActive(token, a.id, !a.is_active);
-      setMsg("Updated.");
+      setMsg("Alert updated.");
       await load();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to update alert.");
     } finally {
-      setLoading(false);
+      setActionLoadingId(null);
     }
   }
 
@@ -62,111 +66,239 @@ export function AlertsPage() {
     if (!token) return;
     setErr(null);
     setMsg(null);
-    setLoading(true);
+    setActionLoadingId(id);
     try {
       await deleteAlert(token, id);
-      setMsg("Deleted.");
+      setMsg("Alert deleted.");
       await load();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to delete alert.");
     } finally {
-      setLoading(false);
+      setActionLoadingId(null);
     }
   }
 
-  return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
-      <h2>Alerts</h2>
+  // --- STYLES ---
+  const pageWrapperStyle: CSSProperties = {
+    minHeight: "100vh",
+    backgroundColor: "#131722",
+    paddingTop: "24px",
+    paddingBottom: "40px",
+    paddingLeft: "24px",
+    paddingRight: "24px",
+    boxSizing: "border-box",
+    fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+    color: "#d1d4dc",
+    display: "flex",
+    flexDirection: "column",
+  };
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "center" }}>
-        <Link to="/me">Me</Link>
-        <Link to="/portfolio">Portfolio</Link>
-        <Link to="/alerts/new">New alert</Link>
-        <Link to="/watchlist">Watchlist</Link>
+  const panelStyle: CSSProperties = {
+    backgroundColor: "#1e222d",
+    borderRadius: "6px",
+    border: "1px solid #2a2e39",
+    padding: "20px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  };
 
-        <button onClick={load} disabled={loading}>
-          Refresh
-        </button>
+  const headerTitleStyle: CSSProperties = {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#ffffff",
+    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  };
 
-        <div style={{ marginLeft: 16, display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ opacity: 0.8 }}>Filter:</span>
-          <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)} disabled={loading}>
-            <option value="active">active</option>
-            <option value="inactive">inactive</option>
-            <option value="all">all</option>
-          </select>
+  const tableHeaderStyle: CSSProperties = {
+    textAlign: "left",
+    padding: "12px 10px",
+    borderBottom: "2px solid #2a2e39",
+    color: "#8d929b",
+    fontSize: "12px",
+    fontWeight: 600,
+    textTransform: "uppercase",
+  };
+
+  const tableCellStyle: CSSProperties = {
+    padding: "12px 10px",
+    borderBottom: "1px solid #2a2e39",
+    color: "#d1d4dc",
+    fontSize: "13px",
+    verticalAlign: "middle",
+  };
+
+  const actionBtnStyle = (variant: 'toggle' | 'delete'): CSSProperties => ({
+    padding: "4px 10px",
+    fontSize: "11px",
+    fontWeight: 600,
+    cursor: "pointer",
+    backgroundColor: variant === 'delete' ? "rgba(255, 77, 77, 0.1)" : "#2a2e39",
+    color: variant === 'delete' ? "#ff4d4d" : "#d1d4dc",
+    border: variant === 'delete' ? "1px solid #ff4d4d" : "1px solid #434651",
+    borderRadius: "4px",
+    transition: "all 0.2s",
+  });
+
+  const selectStyle: CSSProperties = {
+    backgroundColor: "#1e222d",
+    color: "#d1d4dc",
+    border: "1px solid #434651",
+    padding: "4px 8px",
+    borderRadius: "4px",
+    fontSize: "13px",
+    outline: "none",
+    marginLeft: "6px"
+  };
+
+  const createBtnStyle: CSSProperties = {
+    padding: "8px 16px",
+    backgroundColor: "#26cc62",
+    color: "#ffffff",
+    textDecoration: "none",
+    borderRadius: "4px",
+    fontSize: "13px",
+    fontWeight: 700,
+    textTransform: "uppercase"
+  };
+
+  if (!token) {
+    return (
+      <>
+        <Header activeTab="none" />
+        <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
+             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontWeight: 'bold'}}>Zaloguj się</Link>
+          </div>
         </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header activeTab="alerts" refreshAction={load} refreshLoading={loading} />
+
+      <div style={pageWrapperStyle}>
+        
+        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
+        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
+
+        <div style={panelStyle}>
+          
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+             <div style={headerTitleStyle}>Price Alerts</div>
+             
+             <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
+                <div style={{ display: "flex", alignItems: "center", fontSize: '13px', color: '#8d929b' }}>
+                    <span>Filter:</span>
+                    <select 
+                    value={filter} 
+                    onChange={(e) => setFilter(e.target.value as Filter)} 
+                    disabled={loading}
+                    style={selectStyle}
+                    >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="all">All</option>
+                    </select>
+                </div>
+                
+                <Link to="/alerts/new" style={createBtnStyle}>
+                    + New Alert
+                </Link>
+             </div>
+          </div>
+
+          {!loading && !err && items.length === 0 && (
+             <div style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
+               No alerts found matching this filter.
+             </div>
+          )}
+
+          {items.length > 0 && (
+            <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                    <tr>
+                    <th style={tableHeaderStyle}>Created</th>
+                    <th style={tableHeaderStyle}>Listing</th>
+                    <th style={tableHeaderStyle}>Condition</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Target</th>
+                    <th style={tableHeaderStyle}>Status</th>
+                    <th style={tableHeaderStyle}>Last Trigger</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items.map((a) => {
+                        const isLoading = actionLoadingId === a.id;
+                        return (
+                          <tr key={a.id}>
+                              <td style={{...tableCellStyle, color: '#8d929b', fontSize: '12px'}}>
+                                  {fmtDate(a.created_at)}
+                              </td>
+                              <td style={tableCellStyle} title={a.listing_id}>
+                                  <span style={{fontWeight: 700, color: '#fff'}}>{a.ticker ?? "—"}</span>
+                                  <span style={{opacity: 0.6, fontSize: '11px', marginLeft: '6px'}}>
+                                    {a.venue_code}
+                                  </span>
+                              </td>
+                              <td style={{...tableCellStyle, fontWeight: 600}}>
+                                  {a.condition === "ABOVE" ? "Above (>)" : "Below (<)"}
+                              </td>
+                              <td style={{...tableCellStyle, textAlign: 'right', color: '#26cc62', fontWeight: 700}}>
+                                  {a.target_price} <span style={{fontSize: '10px', fontWeight: 400, color: '#8d929b'}}>{a.currency}</span>
+                              </td>
+                              <td style={tableCellStyle}>
+                                <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    backgroundColor: a.is_active ? '#26cc6220' : '#8d929b20',
+                                    color: a.is_active ? '#26cc62' : '#8d929b',
+                                    border: a.is_active ? '1px solid #26cc6240' : '1px solid #8d929b40'
+                                }}>
+                                    {a.is_active ? "ACTIVE" : "INACTIVE"}
+                                </span>
+                              </td>
+                              <td style={{...tableCellStyle, color: '#8d929b', fontSize: '12px'}}>
+                                  {fmtDate(a.last_triggered_at)}
+                              </td>
+                              <td style={{...tableCellStyle, textAlign: 'right'}}>
+                                  <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
+                                    <button 
+                                      onClick={() => onToggle(a)} 
+                                      disabled={isLoading || loading}
+                                      style={actionBtnStyle('toggle')}
+                                    >
+                                      {a.is_active ? "DISABLE" : "ENABLE"}
+                                    </button>
+                                    <button 
+                                      onClick={() => onDelete(a.id)} 
+                                      disabled={isLoading || loading}
+                                      style={actionBtnStyle('delete')}
+                                    >
+                                      DEL
+                                    </button>
+                                  </div>
+                              </td>
+                          </tr>
+                        );
+                    })}
+                </tbody>
+                </table>
+            </div>
+          )}
+        </div>
+
+        <Footer />
       </div>
-
-      {msg && <p style={{ color: "green" }}>{msg}</p>}
-      {err && <p style={{ color: "crimson" }}>{err}</p>}
-      {loading && <p>Loading...</p>}
-
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={th}>Created</th>
-              <th style={th}>Listing</th>
-              <th style={th}>Condition</th>
-              <th style={th}>Target</th>
-              <th style={th}>Active</th>
-              <th style={th}>Triggered</th>
-              <th style={th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((a) => (
-              <tr key={a.id}>
-                <td style={td}>{fmtDate(a.created_at)}</td>
-                <td style={td} title={a.listing_id}>
-                  {a.ticker ?? "(no ticker)"}{" "}
-                    <span style={{ opacity: 0.6 }}>
-                      {a.venue_code ? `(${a.venue_code})` : ""}
-                    </span>
-                </td>
-                <td style={td}>{a.condition}</td>
-                <td style={td}>
-                  {a.target_price} {a.currency}
-                </td>
-                <td style={td}>
-                  <button onClick={() => onToggle(a)} disabled={loading}>
-                    {a.is_active ? "Disable" : "Enable"}
-                  </button>
-                </td>
-                <td style={td}>{fmtDate(a.last_triggered_at)}</td>
-                <td style={td}>
-                  <button onClick={() => onDelete(a.id)} disabled={loading}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {!loading && items.length === 0 && (
-              <tr>
-                <td style={td} colSpan={7}>
-                  No alerts.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </>
   );
 }
-
-const th: CSSProperties = {
-  textAlign: "left",
-  padding: "10px 8px",
-  borderBottom: "1px solid #ddd",
-  fontWeight: 700,
-  fontSize: 13,
-};
-
-const td: CSSProperties = {
-  padding: "10px 8px",
-  borderBottom: "1px solid #eee",
-  fontSize: 13,
-};

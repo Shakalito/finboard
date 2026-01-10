@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { searchListings, type ListingSummary } from "../api/refdata";
 
 type Props = {
@@ -10,46 +10,53 @@ type Props = {
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
-
   useEffect(() => {
     const t = setTimeout(() => setDebounced(value), delayMs);
     return () => clearTimeout(t);
   }, [value, delayMs]);
-
   return debounced;
 }
 
 export function ListingDropdown({
   value,
   onChange,
-  placeholder = "Search ticker or company name (e.g. AAPL, Tesla)...",
+  placeholder = "Search ticker...",
   limit = 20,
 }: Props) {
-  const [query, setQuery] = useState<string>(value?.ticker ?? value?.name ?? "");
+  const formatDisplay = (item: ListingSummary) => 
+    item.ticker ? `${item.ticker} — ${item.name}` : item.name;
+
+  const [query, setQuery] = useState<string>("");
   const [items, setItems] = useState<ListingSummary[]>([]);
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [hoverClear, setHoverClear] = useState(false);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const isSelectionUpdate = useRef(false);
   const debouncedQuery = useDebouncedValue(query, 300);
 
   useEffect(() => {
     if (value) {
-      setQuery(value.ticker ? `${value.ticker} — ${value.name}` : value.name);
-    } else {
-      setQuery("");
+      setQuery(formatDisplay(value));
+      isSelectionUpdate.current = true;
     }
   }, [value]);
 
   const canSearch = useMemo(() => debouncedQuery.trim().length >= 1, [debouncedQuery]);
 
   useEffect(() => {
+    if (isSelectionUpdate.current) {
+      isSelectionUpdate.current = false;
+      return;
+    }
+
     let cancelled = false;
 
     async function run() {
       setErr(null);
-
       if (!canSearch) {
         setItems([]);
         return;
@@ -60,9 +67,11 @@ export function ListingDropdown({
         const res = await searchListings(debouncedQuery.trim(), limit);
         if (cancelled) return;
         setItems(res);
+        setHighlightedIndex(-1);
+        setIsOpen(true);
       } catch (e: any) {
         if (cancelled) return;
-        setErr(e?.message ?? "Failed to load listings");
+        setErr(e?.message ?? "Error loading listings");
         setItems([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -70,18 +79,13 @@ export function ListingDropdown({
     }
 
     run();
-    return () => {
-      cancelled = true;
-    };
-  }, [canSearch, debouncedQuery, limit]);
+    return () => { cancelled = true; };
+  }, [debouncedQuery, limit, canSearch]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function onDocDown(ev: MouseEvent) {
-      const el = wrapRef.current;
-      if (!el) return;
-      if (!el.contains(ev.target as Node)) {
-        setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(ev.target as Node)) {
+        setIsOpen(false);
       }
     }
     document.addEventListener("mousedown", onDocDown);
@@ -89,8 +93,11 @@ export function ListingDropdown({
   }, []);
 
   function selectItem(it: ListingSummary) {
+    setQuery(formatDisplay(it));
+    isSelectionUpdate.current = true;
     onChange(it);
-    setOpen(false);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
   }
 
   function clear() {
@@ -98,87 +105,164 @@ export function ListingDropdown({
     setQuery("");
     setItems([]);
     setErr(null);
-    setOpen(false);
+    setIsOpen(false);
+    isSelectionUpdate.current = true;
   }
 
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (!isOpen) {
+        if (e.key === "ArrowDown") setIsOpen(true);
+        return;
+    }
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev < items.length - 1 ? prev + 1 : prev));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedIndex >= 0 && items[highlightedIndex]) {
+          selectItem(items[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        break;
+    }
+  }
+
+  
+  const styles = {
+    container: {
+      position: "relative" as const,
+      width: "100%",
+      fontFamily: "Roboto, sans-serif",
+    },
+    row: {
+      display: "flex",
+      gap: "8px",
+      height: "40px", 
+    },
+    input: {
+      flex: 1,
+      padding: "0 12px",
+      fontSize: "14px",
+      backgroundColor: "#131722",
+      border: isOpen ? "1px solid #26cc62" : "1px solid #434651", 
+      borderRadius: "4px",
+      color: "#ffffff",
+      outline: "none",
+      height: "100%",
+    },
+    clearBtn: {
+      padding: "0 14px",
+      fontSize: "12px",
+      fontWeight: 600,
+      cursor: "pointer",
+      backgroundColor: hoverClear ? "#434651" : "#2a2e39",
+      color: hoverClear ? "#ffffff" : "#8d929b",
+      border: "1px solid #434651",
+      borderRadius: "4px",
+      transition: "all 0.2s",
+      textTransform: "uppercase" as const,
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+    },
+    dropdown: {
+      position: "absolute" as const,
+      top: "calc(100% + 4px)",
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      backgroundColor: "#1e222d", 
+      border: "1px solid #434651",
+      borderRadius: "4px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      maxHeight: "300px",
+      overflowY: "auto" as const,
+    },
+    item: (isActive: boolean) => ({
+      padding: "10px 12px",
+      cursor: "pointer",
+      backgroundColor: isActive ? "#2a2e39" : "transparent",
+      borderBottom: "1px solid #2a2e39",
+      color: "#d1d4dc",
+    }),
+    ticker: {
+      fontWeight: 700,
+      color: "#ffffff",
+      fontSize: "14px",
+    },
+    meta: {
+      fontSize: "12px",
+      color: "#8d929b",
+      marginTop: "2px",
+    },
+  };
+
   return (
-    <div ref={wrapRef} style={{ position: "relative", width: "100%" }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div ref={wrapRef} style={styles.container}>
+      <div style={styles.row}>
         <input
+          type="text"
           value={query}
           placeholder={placeholder}
+          onKeyDown={handleKeyDown}
           onChange={(e) => {
             setQuery(e.target.value);
-            setOpen(true);
-            if (value) onChange(null);
+            setIsOpen(true);
           }}
-          onFocus={() => setOpen(true)}
-          style={{
-            flex: 1,
-            padding: "10px 10px",
-            borderRadius: 8,
-            border: "1px solid #ccc",
-          }}
+          onFocus={() => { if (query.length > 0) setIsOpen(true); }}
+          style={styles.input}
         />
-        <button type="button" onClick={clear} disabled={!query && !value}>
-          Clear
-        </button>
-      </div>
-
-      <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-        {loading && <span>Searching…</span>}
-        {!loading && err && <span style={{ color: "crimson" }}>{err}</span>}
-        {!loading && !err && value && (
-          <span>
-            Selected: <b>{value.ticker ?? "(no ticker)"}</b> — {value.name} ({value.venue_code})
-          </span>
-        )}
-        {!loading && !err && !value && query.trim().length > 0 && (
-          <span>Pick a result from the list.</span>
+        
+        
+        {(query || value) && (
+          <button 
+            type="button" 
+            onClick={clear}
+            style={styles.clearBtn}
+            onMouseEnter={() => setHoverClear(true)}
+            onMouseLeave={() => setHoverClear(false)}
+          >
+            CLEAR
+          </button>
         )}
       </div>
 
-      {open && (items.length > 0 || loading || err) && (
-        <div
-          style={{
-            position: "absolute",
-            top: 46,
-            left: 0,
-            right: 0,
-            zIndex: 20,
-            background: "white",
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-            maxHeight: 320,
-            overflowY: "auto",
-          }}
-        >
-          {items.map((it) => (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => selectItem(it)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "10px 12px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>
-                {it.ticker ?? "(no ticker)"} <span style={{ fontWeight: 400 }}>— {it.name}</span>
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
-                {it.venue_code} • {it.venue_name} • {it.currency ?? "-"}
-              </div>
-            </button>
-          ))}
+      <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8, minHeight: 18 }}>
+        {loading && <span style={{color: '#8d929b'}}>Searching...</span>}
+        {!loading && err && <span style={{ color: "#ff4d4d" }}>{err}</span>}
+      </div>
 
-          {!loading && !err && items.length === 0 && (
-            <div style={{ padding: 12, opacity: 0.8 }}>No results.</div>
+      {isOpen && (items.length > 0 || !loading) && !err && (
+        <div style={styles.dropdown}>
+          {items.map((it, index) => {
+            const isHighlighted = index === highlightedIndex;
+            return (
+              <div
+                key={it.id || index}
+                onClick={() => selectItem(it)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                style={styles.item(isHighlighted)}
+              >
+                <div style={styles.ticker}>
+                  {it.ticker ?? ""} <span style={{fontWeight: 400, color: '#d1d4dc'}}>— {it.name}</span>
+                </div>
+                <div style={styles.meta}>
+                  {it.venue_code} • {it.venue_name}
+                </div>
+              </div>
+            );
+          })}
+          
+          {items.length === 0 && query.length > 0 && (
+             <div style={{padding: 12, color: '#8d929b', textAlign: 'center'}}>No results found.</div>
           )}
         </div>
       )}
