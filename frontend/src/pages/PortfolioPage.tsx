@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Header } from "../components/Header";
+import { Notification } from "../components/Notification";
 import { Footer } from "../components/Footer";
 import {
   createPaperAccount,
@@ -13,6 +14,7 @@ import {
   type AccountRead,
   type PositionRead,
 } from "../api/portfolio";
+import { getQuotesBatch, type QuoteResponse } from "../api/marketdata";
 import { ListingDropdown } from "../components/ListingDropdown";
 import type { ListingSummary } from "../api/refdata";
 
@@ -42,11 +44,12 @@ export function PortfolioPage() {
 
   const [side, setSide] = useState<Side>("BUY");
   const [selectedListing, setSelectedListing] = useState<ListingSummary | null>(null);
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [qty, setQty] = useState<string>("1");
   const [tradeBusy, setTradeBusy] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
-  const canUseApi = useMemo(() => !!token, [token]);
+
 
   async function ensurePaperAccount(): Promise<AccountRead> {
     const accs = await getMyAccounts(token!);
@@ -86,6 +89,25 @@ export function PortfolioPage() {
     }
     refreshAll();
   }, [token]);
+
+  useEffect(() => {
+    if (!selectedListing) {
+      setQuote(null);
+      return;
+    }
+
+    // Reset quote while loading
+    setQuote(null);
+
+    getQuotesBatch([selectedListing.id])
+      .then(res => {
+        const q = res.results[selectedListing.id];
+        if (q) setQuote(q);
+      })
+      .catch(err => {
+        console.error("Failed to fetch quote", err);
+      });
+  }, [selectedListing]);
 
   async function onDepositClick() {
     setMsg(null);
@@ -234,8 +256,8 @@ export function PortfolioPage() {
     fontSize: "14px",
     border: "none",
     borderRadius: "4px",
-    backgroundColor: side === btnSide 
-      ? (btnSide === "BUY" ? "#26cc62" : "#ff4d4d") 
+    backgroundColor: side === btnSide
+      ? (btnSide === "BUY" ? "#26cc62" : "#ff4d4d")
       : "#2a2e39",
     color: side === btnSide ? "#ffffff" : "#8d929b",
     transition: "all 0.2s",
@@ -260,7 +282,7 @@ export function PortfolioPage() {
 
   const gridContainerStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr", 
+    gridTemplateColumns: "1fr 1fr",
     gap: "24px",
     marginBottom: "24px",
   };
@@ -271,9 +293,9 @@ export function PortfolioPage() {
         <Header activeTab="none" />
         <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
-             <p style={{color: '#8d929b', marginBottom: '20px'}}>Musisz się zalogować, aby zobaczyć portfel.</p>
-             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold'}}>Zaloguj się</Link>
+            <h2 style={{ color: '#fff' }}>Dostęp zabroniony</h2>
+            <p style={{ color: '#8d929b', marginBottom: '20px' }}>Musisz się zalogować, aby zobaczyć portfel.</p>
+            <Link to="/login" style={{ color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold' }}>Zaloguj się</Link>
           </div>
         </div>
       </>
@@ -285,34 +307,94 @@ export function PortfolioPage() {
       <Header activeTab="dashboard" refreshAction={refreshAll} refreshLoading={loading} />
 
       <div style={pageWrapperStyle}>
-        
-        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
-        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
+
+        {msg && (
+          <Notification message={msg} type="success" onClose={() => setMsg(null)} />
+        )}
+        {err && (
+          <Notification message={err} type="error" onClose={() => setErr(null)} />
+        )}
 
         <div style={gridContainerStyle}>
-          
+
           <div style={panelStyle}>
             <div style={headerTitleStyle}>Account Summary</div>
-            
-            {!account && <div style={{color: '#8d929b'}}>Loading account details...</div>}
-            
+
+            {!account && <div style={{ color: '#8d929b' }}>Loading account details...</div>}
+
             {account && (
               <>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                  <div>
-                    <div style={{fontSize: '12px', color: '#8d929b', marginBottom: '4px'}}>AVAILABLE CASH</div>
-                    <div style={{fontSize: '32px', fontWeight: 700, color: '#ffffff'}}>
-                      {cash == null ? "—" : fmtMoney(cash)} <span style={{fontSize: '16px', color: '#8d929b'}}>{account.base_currency}</span>
-                    </div>
+                {/* Total Equity (Cash + Market Value of Positions) */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>TOTAL EQUITY</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>ID: {account.id}</div>
                   </div>
-                  <div style={{fontSize: '12px', color: '#8d929b'}}>ID: {account.id.substring(0, 8)}...</div>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>
+                    {(() => {
+                      const totalMktVal = positions.reduce((acc, p) => acc + (p.market_value || 0), 0);
+                      const equity = (cash || 0) + totalMktVal;
+                      return fmtMoney(equity);
+                    })()} <span style={{ fontSize: '16px', color: '#8d929b' }}>{account.base_currency}</span>
+                  </div>
                 </div>
 
-                <div style={{height: '1px', background: '#2a2e39', margin: '4px 0'}}></div>
+                {/* Grid for Cash, P/L, Return, Count */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  {/* Row 1, Col 1 */}
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>AVAILABLE CASH</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#d1d4dc' }}>
+                      {cash == null ? "—" : fmtMoney(cash)} <span style={{ fontSize: '12px', color: '#8d929b' }}>{account.base_currency}</span>
+                    </div>
+                  </div>
+                  {/* Row 1, Col 2 */}
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>UNREALIZED P&L</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700 }}>
+                      {(() => {
+                        const totalPnl = positions.reduce((acc, p) => acc + (p.unrealized_pnl_abs || 0), 0);
+                        const color = totalPnl >= 0 ? '#26cc62' : '#ff4d4d';
+                        return (
+                          <span style={{ color }}>
+                            {totalPnl > 0 ? "+" : ""}{fmtMoney(totalPnl)} <span style={{ fontSize: '12px', color: '#8d929b' }}>{account.base_currency}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {/* Row 2, Col 1 */}
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>RETURN %</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700 }}>
+                      {(() => {
+                        const totalCostBasis = positions.reduce((acc, p) => acc + ((p.market_value || 0) - (p.unrealized_pnl_abs || 0)), 0);
+                        const totalPnl = positions.reduce((acc, p) => acc + (p.unrealized_pnl_abs || 0), 0);
 
-                <div style={{display: 'flex', gap: '10px', alignItems: 'flex-end'}}>
-                  <div style={{flex: 1}}>
-                    <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Quick Deposit</label>
+                        if (totalCostBasis === 0) return <span style={{ color: '#8d929b' }}>0.00%</span>;
+
+                        const retPct = (totalPnl / totalCostBasis) * 100;
+                        const color = retPct >= 0 ? '#26cc62' : '#ff4d4d';
+                        return (
+                          <span style={{ color }}>
+                            {retPct > 0 ? "+" : ""}{retPct.toFixed(2)}%
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {/* Row 2, Col 2 */}
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>OPEN POSITIONS</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#d1d4dc' }}>
+                      {positions.length}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginTop: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Quick Deposit</label>
                     <input
                       value={depAmount}
                       onChange={(e) => setDepAmount(e.target.value)}
@@ -320,8 +402,8 @@ export function PortfolioPage() {
                       style={inputStyle}
                     />
                   </div>
-                  <button 
-                    onClick={() => onDepositClick()} 
+                  <button
+                    onClick={() => onDepositClick()}
                     disabled={loading}
                     style={btnStyle('gray', hoveredBtn === 'deposit')}
                     onMouseEnter={() => setHoveredBtn('deposit')}
@@ -336,51 +418,213 @@ export function PortfolioPage() {
 
           <div style={panelStyle}>
             <div style={headerTitleStyle}>New Order</div>
-            
-            <div style={{display: 'flex', gap: '10px'}}>
+
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '4px' }}>
               <button onClick={() => setSide("BUY")} disabled={tradeBusy} style={sideBtnStyle("BUY")}>BUY</button>
               <button onClick={() => setSide("SELL")} disabled={tradeBusy} style={sideBtnStyle("SELL")}>SELL</button>
             </div>
 
-            <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px'}}>
-              <div>
-                <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Asset</label>
+            {/* Row 1: Asset + Unit Price */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Asset</label>
                 <div style={{ height: '40px' }}>
-                    <ListingDropdown value={selectedListing} onChange={setSelectedListing} />
+                  <ListingDropdown value={selectedListing} onChange={setSelectedListing} />
                 </div>
               </div>
-              <div>
-                <label style={{fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px'}}>Volume</label>
-                <input
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value)}
-                  placeholder="Lots"
-                  style={{...inputStyle, height: '40px'}}
-                  disabled={tradeBusy || !canUseApi}
-                />
+              <div style={{ textAlign: 'right', minWidth: '100px', paddingBottom: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>Unit Price</div>
+                <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 700 }}>
+                  {quote?.price != null ? fmtMoney(quote.price) : "—"} <span style={{ fontSize: '10px', color: '#64748b' }}>{selectedListing?.currency ?? ""}</span>
+                </div>
               </div>
             </div>
 
-            <button 
-              onClick={() => onTradeClick()} 
-              disabled={tradeBusy || !account}
+            {/* Row 2: Qty + Total Cost */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '20px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Quantity</label>
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  background: '#131722',
+                  border: '1px solid #434651',
+                  borderRadius: '4px',
+                  height: '40px',
+                  position: 'relative'
+                }}>
+                  <input
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    placeholder="1"
+                    type="number"
+                    min="1"
+                    style={{
+                      ...inputStyle,
+                      border: 'none',
+                      height: '100%',
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      textAlign: 'left',
+                      paddingLeft: '12px',
+                      width: '100%',
+                      appearance: 'textfield',
+                      MozAppearance: 'textfield',
+                      background: 'transparent'
+                    }}
+                  />
+                  <style>{`
+                      input::-webkit-outer-spin-button,
+                      input::-webkit-inner-spin-button {
+                        -webkit-appearance: none;
+                        margin: 0;
+                      }
+                   `}</style>
+
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderLeft: '1px solid #434651',
+                    height: '100%'
+                  }}>
+                    <button
+                      onClick={() => setQty(prev => {
+                        const val = Number(prev);
+                        if (Number.isNaN(val)) return "1";
+                        return (val + 1).toString();
+                      })}
+                      disabled={tradeBusy}
+                      style={{
+                        flex: 1, width: '24px',
+                        background: '#2a2e39', border: 'none', borderBottom: '1px solid #434651',
+                        color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderTopRightRadius: '3px'
+                      }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => setQty(prev => {
+                        const val = Number(prev);
+                        if (Number.isNaN(val) || val <= 1) return "1";
+                        return Math.max(1, val - 1).toString();
+                      })}
+                      disabled={tradeBusy}
+                      style={{
+                        flex: 1, width: '24px',
+                        background: '#2a2e39', border: 'none',
+                        color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderBottomRightRadius: '3px'
+                      }}
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', minWidth: '100px', paddingBottom: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>Total Cost</div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: (() => {
+                    const price = quote?.price ?? 0;
+                    const q = Number(qty);
+
+                    if (q <= 0) return "#d1d4dc";
+                    if (!selectedListing) return "#ffffff";
+
+                    const total = price * q;
+
+                    if (side === "BUY") {
+                      if (cash != null && total > cash) return "#ff4d4d";
+                    } else {
+                      const pos = positions.find(p => p.listing_id === selectedListing.id);
+                      const owned = pos?.qty ?? 0;
+                      if (q > owned) return "#ff4d4d";
+                    }
+
+                    return "#ffffff";
+                  })()
+                }}>
+                  {(() => {
+                    const price = quote?.price ?? 0;
+                    const q = Number(qty);
+                    if (q <= 0) return "—";
+                    return fmtMoney(price * q);
+                  })()} <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 400 }}>{selectedListing?.currency ?? "USD"}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                // Explicit validation on click to show error messages
+                if (!account) { setErr("No account available."); return; }
+                if (!selectedListing) { setErr("Please select a listing first."); return; }
+
+                const q = Number(qty);
+                if (!Number.isFinite(q) || q <= 0) {
+                  setErr("Quantity must be greater than 0.");
+                  return;
+                }
+
+                const price = quote?.price ?? 0;
+                const total = price * q;
+
+                if (side === "BUY") {
+                  if (cash != null && total > cash) {
+                    setErr(`Insufficient funds. You need ${fmtMoney(total)} but only have ${fmtMoney(cash)}.`);
+                    return;
+                  }
+                } else {
+                  const pos = positions.find(p => p.listing_id === selectedListing.id);
+                  const owned = pos?.qty ?? 0;
+                  if (q > owned) {
+                    setErr(`Insufficient shares. You have ${owned} but are trying to sell ${q}.`);
+                    return;
+                  }
+                }
+
+                onTradeClick();
+              }}
+              disabled={tradeBusy}
               style={{
                 ...btnStyle(side === "BUY" ? 'green' : 'red', hoveredBtn === 'trade'),
-                marginTop: 'auto'
+                opacity: (() => {
+                  if (tradeBusy) return 0.5;
+                  // We keep it fully opaque (or slightly dimmed?) to encourage clicking so they see the error
+                  // checking validity just for visual cue, but not disabling
+                  if (!selectedListing) return 0.5;
+
+                  const q = Number(qty);
+                  if (!Number.isFinite(q) || q <= 0) return 1; // Let them click to see "invalid qty"
+
+                  if (quote?.price) {
+                    const total = quote.price * q;
+                    if (side === "BUY" && cash != null && total > cash) return 0.5; // Visual hint something is wrong
+                    if (side === "SELL") {
+                      const pos = positions.find(p => p.listing_id === selectedListing?.id);
+                      const owned = pos?.qty ?? 0;
+                      if (q > owned) return 0.5;
+                    }
+                  }
+                  return 1;
+                })(),
+                marginTop: '12px'
               }}
               onMouseEnter={() => setHoveredBtn('trade')}
               onMouseLeave={() => setHoveredBtn(null)}
             >
-              {tradeBusy ? "PROCESSING..." : `PLACE ${side} ORDER`}
+              {tradeBusy ? "PROCESSING..." : (side === "BUY" ? "PLACE BUY ORDER" : "PLACE SELL ORDER")}
             </button>
           </div>
         </div>
 
         <div style={panelStyle}>
           <div style={headerTitleStyle}>Open Positions</div>
-          
-          {loading && <div style={{color: '#8d929b', padding: '20px'}}>Loading data...</div>}
-          {!loading && positions.length === 0 && <div style={{color: '#8d929b', padding: '20px', textAlign: 'center'}}>No open positions</div>}
+
+          {loading && <div style={{ color: '#8d929b', padding: '20px' }}>Loading data...</div>}
+          {!loading && positions.length === 0 && <div style={{ color: '#8d929b', padding: '20px', textAlign: 'center' }}>No open positions</div>}
 
           {!loading && positions.length > 0 && (
             <div style={{ overflowX: "auto" }}>
@@ -390,37 +634,37 @@ export function PortfolioPage() {
                     <th style={tableHeaderStyle}>Instrument</th>
                     <th style={tableHeaderStyle}>Name</th>
                     <th style={tableHeaderStyle}>Venue</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Volume</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Open Price</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Market Price</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Value</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>P&L</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Net %</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Time</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Volume</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Open Price</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Market Price</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Value</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>P&L</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Net %</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {positions.map((p) => {
                     const pnl = p.unrealized_pnl_abs || 0;
                     const pnlColor = pnl >= 0 ? "#26cc62" : "#ff4d4d";
-                    
+
                     return (
                       <tr key={p.position_id}>
-                        <td style={{...tableCellStyle, fontWeight: 700, color: '#fff'}}>{p.ticker ?? "—"}</td>
+                        <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>{p.ticker ?? "—"}</td>
                         <td style={tableCellStyle}>{p.name}</td>
                         <td style={tableCellStyle}>{p.venue_code}</td>
-                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtNum(p.qty)}</td>
-                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.avg_price)}</td>
-                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.last_price)}</td>
-                        <td style={{...tableCellStyle, textAlign: 'right'}}>{fmtMoney(p.market_value)}</td>
-                        <td style={{...tableCellStyle, textAlign: 'right', color: pnlColor, fontWeight: 600}}>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>{fmtNum(p.qty)}</td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>{fmtMoney(p.avg_price)}</td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>{fmtMoney(p.last_price)}</td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>{fmtMoney(p.market_value)}</td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right', color: pnlColor, fontWeight: 600 }}>
                           {pnl > 0 ? "+" : ""}{fmtMoney(pnl)}
                         </td>
-                        <td style={{...tableCellStyle, textAlign: 'right', color: pnlColor}}>
+                        <td style={{ ...tableCellStyle, textAlign: 'right', color: pnlColor }}>
                           {p.unrealized_pnl_pct == null ? "—" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
                         </td>
-                        <td style={{...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px'}}>
-                           {p.asof ? new Date(p.asof).toLocaleTimeString() : "—"}
+                        <td style={{ ...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px' }}>
+                          {p.asof ? new Date(p.asof).toLocaleTimeString() : "—"}
                         </td>
                       </tr>
                     );

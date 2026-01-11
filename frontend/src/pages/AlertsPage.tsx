@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { deleteAlert, getMyAlerts, setAlertActive, type AlertRead } from "../api/alerts";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 type Filter = "active" | "inactive" | "all";
 
@@ -13,7 +14,7 @@ function fmtDate(iso: string | null) {
 }
 
 export function AlertsPage() {
-  const { token } = useAuth(); 
+  const { token } = useAuth();
 
   const [items, setItems] = useState<AlertRead[]>([]);
   const [filter, setFilter] = useState<Filter>("active");
@@ -171,8 +172,8 @@ export function AlertsPage() {
         <Header activeTab="none" />
         <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
-             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontWeight: 'bold'}}>Zaloguj się</Link>
+            <h2 style={{ color: '#fff' }}>Dostęp zabroniony</h2>
+            <Link to="/login" style={{ color: '#26cc62', textDecoration: 'none', fontWeight: 'bold' }}>Zaloguj się</Link>
           </div>
         </div>
       </>
@@ -184,115 +185,119 @@ export function AlertsPage() {
       <Header activeTab="alerts" refreshAction={load} refreshLoading={loading} />
 
       <div style={pageWrapperStyle}>
-        
-        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
-        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
+
+        {msg && (
+          <Notification message={msg} type="success" onClose={() => setMsg(null)} />
+        )}
+        {err && (
+          <Notification message={err} type="error" onClose={() => setErr(null)} />
+        )}
 
         <div style={panelStyle}>
-          
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-             <div style={headerTitleStyle}>Price Alerts</div>
-             
-             <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
-                <div style={{ display: "flex", alignItems: "center", fontSize: '13px', color: '#8d929b' }}>
-                    <span>Filter:</span>
-                    <select 
-                    value={filter} 
-                    onChange={(e) => setFilter(e.target.value as Filter)} 
-                    disabled={loading}
-                    style={selectStyle}
-                    >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="all">All</option>
-                    </select>
-                </div>
-                
-                <Link to="/alerts/new" style={createBtnStyle}>
-                    + New Alert
-                </Link>
-             </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={headerTitleStyle}>Price Alerts</div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{ display: "flex", alignItems: "center", fontSize: '13px', color: '#8d929b' }}>
+                <span>Filter:</span>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as Filter)}
+                  disabled={loading}
+                  style={selectStyle}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+
+              <Link to="/alerts/new" style={createBtnStyle}>
+                + New Alert
+              </Link>
+            </div>
           </div>
 
           {!loading && !err && items.length === 0 && (
-             <div style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
-               No alerts found matching this filter.
-             </div>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
+              No alerts found matching this filter.
+            </div>
           )}
 
           {items.length > 0 && (
             <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                    <tr>
+                  <tr>
                     <th style={tableHeaderStyle}>Created</th>
                     <th style={tableHeaderStyle}>Listing</th>
                     <th style={tableHeaderStyle}>Condition</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Target</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Target</th>
                     <th style={tableHeaderStyle}>Status</th>
                     <th style={tableHeaderStyle}>Last Trigger</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Actions</th>
-                    </tr>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Actions</th>
+                  </tr>
                 </thead>
                 <tbody>
-                    {items.map((a) => {
-                        const isLoading = actionLoadingId === a.id;
-                        return (
-                          <tr key={a.id}>
-                              <td style={{...tableCellStyle, color: '#8d929b', fontSize: '12px'}}>
-                                  {fmtDate(a.created_at)}
-                              </td>
-                              <td style={tableCellStyle} title={a.listing_id}>
-                                  <span style={{fontWeight: 700, color: '#fff'}}>{a.ticker ?? "—"}</span>
-                                  <span style={{opacity: 0.6, fontSize: '11px', marginLeft: '6px'}}>
-                                    {a.venue_code}
-                                  </span>
-                              </td>
-                              <td style={{...tableCellStyle, fontWeight: 600}}>
-                                  {a.condition === "ABOVE" ? "Above (>)" : "Below (<)"}
-                              </td>
-                              <td style={{...tableCellStyle, textAlign: 'right', color: '#26cc62', fontWeight: 700}}>
-                                  {a.target_price} <span style={{fontSize: '10px', fontWeight: 400, color: '#8d929b'}}>{a.currency}</span>
-                              </td>
-                              <td style={tableCellStyle}>
-                                <span style={{
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '3px',
-                                    backgroundColor: a.is_active ? '#26cc6220' : '#8d929b20',
-                                    color: a.is_active ? '#26cc62' : '#8d929b',
-                                    border: a.is_active ? '1px solid #26cc6240' : '1px solid #8d929b40'
-                                }}>
-                                    {a.is_active ? "ACTIVE" : "INACTIVE"}
-                                </span>
-                              </td>
-                              <td style={{...tableCellStyle, color: '#8d929b', fontSize: '12px'}}>
-                                  {fmtDate(a.last_triggered_at)}
-                              </td>
-                              <td style={{...tableCellStyle, textAlign: 'right'}}>
-                                  <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
-                                    <button 
-                                      onClick={() => onToggle(a)} 
-                                      disabled={isLoading || loading}
-                                      style={actionBtnStyle('toggle')}
-                                    >
-                                      {a.is_active ? "DISABLE" : "ENABLE"}
-                                    </button>
-                                    <button 
-                                      onClick={() => onDelete(a.id)} 
-                                      disabled={isLoading || loading}
-                                      style={actionBtnStyle('delete')}
-                                    >
-                                      DEL
-                                    </button>
-                                  </div>
-                              </td>
-                          </tr>
-                        );
-                    })}
+                  {items.map((a) => {
+                    const isLoading = actionLoadingId === a.id;
+                    return (
+                      <tr key={a.id}>
+                        <td style={{ ...tableCellStyle, color: '#8d929b', fontSize: '12px' }}>
+                          {fmtDate(a.created_at)}
+                        </td>
+                        <td style={tableCellStyle} title={a.listing_id}>
+                          <span style={{ fontWeight: 700, color: '#fff' }}>{a.ticker ?? "—"}</span>
+                          <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: '6px' }}>
+                            {a.venue_code}
+                          </span>
+                        </td>
+                        <td style={{ ...tableCellStyle, fontWeight: 600 }}>
+                          {a.condition === "ABOVE" ? "Above (>)" : "Below (<)"}
+                        </td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right', color: '#26cc62', fontWeight: 700 }}>
+                          {a.target_price} <span style={{ fontSize: '10px', fontWeight: 400, color: '#8d929b' }}>{a.currency}</span>
+                        </td>
+                        <td style={tableCellStyle}>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            backgroundColor: a.is_active ? '#26cc6220' : '#8d929b20',
+                            color: a.is_active ? '#26cc62' : '#8d929b',
+                            border: a.is_active ? '1px solid #26cc6240' : '1px solid #8d929b40'
+                          }}>
+                            {a.is_active ? "ACTIVE" : "INACTIVE"}
+                          </span>
+                        </td>
+                        <td style={{ ...tableCellStyle, color: '#8d929b', fontSize: '12px' }}>
+                          {fmtDate(a.last_triggered_at)}
+                        </td>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => onToggle(a)}
+                              disabled={isLoading || loading}
+                              style={actionBtnStyle('toggle')}
+                            >
+                              {a.is_active ? "DISABLE" : "ENABLE"}
+                            </button>
+                            <button
+                              onClick={() => onDelete(a.id)}
+                              disabled={isLoading || loading}
+                              style={actionBtnStyle('delete')}
+                            >
+                              DEL
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
-                </table>
+              </table>
             </div>
           )}
         </div>

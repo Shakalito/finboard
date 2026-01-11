@@ -6,15 +6,16 @@ import { ListingDropdown } from "../components/ListingDropdown";
 import { type ListingSummary } from "../api/refdata";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 export function NewAlertPage() {
-  const { token } = useAuth(); 
+  const { token } = useAuth();
   const navigate = useNavigate();
 
   const [selectedListing, setSelectedListing] = useState<ListingSummary | null>(null);
   const [condition, setCondition] = useState<AlertCondition>("ABOVE");
   const [target, setTarget] = useState<string>("");
-  
+
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,7 +92,7 @@ export function NewAlertPage() {
     flexDirection: "column",
     gap: "20px",
     margin: "0 auto",
-    marginBottom: "40px" 
+    marginBottom: "40px"
   };
 
   const headerTitleStyle: CSSProperties = {
@@ -156,60 +157,64 @@ export function NewAlertPage() {
         <div style={panelStyle}>
           <h2 style={headerTitleStyle}>Create New Alert</h2>
 
-          {msg && <div style={{padding: '10px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', textAlign: 'center'}}>{msg}</div>}
-          {err && <div style={{padding: '10px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', textAlign: 'center'}}>{err}</div>}
+          {msg && (
+            <Notification message={msg} type="success" onClose={() => setMsg(null)} />
+          )}
+          {err && (
+            <Notification message={err} type="error" onClose={() => setErr(null)} />
+          )}
 
           <form onSubmit={onSubmit}>
-            
-            <div style={{marginBottom: '16px'}}>
-                <label style={labelStyle}>Select Asset</label>
-                <div style={{ height: '40px' }}>
-                    <ListingDropdown value={selectedListing} onChange={setSelectedListing} placeholder="Search for asset (e.g. AAPL)..." />
-                </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Select Asset</label>
+              <div style={{ height: '40px' }}>
+                <ListingDropdown value={selectedListing} onChange={setSelectedListing} placeholder="Search for asset (e.g. AAPL)..." />
+              </div>
             </div>
 
-            <div style={{marginBottom: '16px'}}>
-                <label style={labelStyle}>Condition</label>
-                <select
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value as AlertCondition)}
-                    style={inputStyle}
-                    disabled={loading}
-                >
-                    <option value="ABOVE">Price Goes Above ( &gt; )</option>
-                    <option value="BELOW">Price Goes Below ( &lt; )</option>
-                </select>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Condition</label>
+              <select
+                value={condition}
+                onChange={(e) => setCondition(e.target.value as AlertCondition)}
+                style={inputStyle}
+                disabled={loading}
+              >
+                <option value="ABOVE">Price Goes Above ( &gt; )</option>
+                <option value="BELOW">Price Goes Below ( &lt; )</option>
+              </select>
             </div>
 
-            <div style={{marginBottom: '16px'}}>
-                <label style={labelStyle}>Target Price</label>
-                <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                    <input
-                        value={target}
-                        onChange={(e) => setTarget(e.target.value)}
-                        placeholder="0.00"
-                        type="number"
-                        step="0.01"
-                        style={inputStyle}
-                        disabled={loading}
-                    />
-                    <span style={{
-                        position: 'absolute', 
-                        right: '12px', 
-                        color: '#8d929b', 
-                        fontSize: '12px'
-                    }}>
-                        {selectedListing?.currency || 'USD'}
-                    </span>
-                </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Target Price</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  style={inputStyle}
+                  disabled={loading}
+                />
+                <span style={{
+                  position: 'absolute',
+                  right: '12px',
+                  color: '#8d929b',
+                  fontSize: '12px'
+                }}>
+                  {selectedListing?.currency || 'USD'}
+                </span>
+              </div>
             </div>
 
             <button type="submit" style={btnStyle} disabled={loading || !canSubmit}>
-                {loading ? "CREATING..." : "CREATE ALERT"}
+              {loading ? "CREATING..." : "CREATE ALERT"}
             </button>
 
             <Link to="/alerts" style={backLinkStyle}>
-                Cancel and go back
+              Cancel and go back
             </Link>
 
           </form>

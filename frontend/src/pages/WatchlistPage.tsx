@@ -1,10 +1,11 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { getMyWatchlist, removeFromWatchlist, type WatchlistItemRead } from "../api/watchlist";
 import { useAuth } from "../auth/AuthContext";
 import { useQuotes } from "../marketdata/useQuotes";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 function fmtMoney(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return "—";
@@ -12,7 +13,7 @@ function fmtMoney(v: number | null | undefined) {
 }
 
 export function WatchlistPage() {
-  const { token } = useAuth(); 
+  const { token } = useAuth();
 
   const [items, setItems] = useState<WatchlistItemRead[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -55,8 +56,8 @@ export function WatchlistPage() {
   }
 
   const handleRefresh = () => {
-      reload(); 
-      load();   
+    reload();
+    load();
   };
 
 
@@ -132,9 +133,9 @@ export function WatchlistPage() {
         <Header activeTab="none" />
         <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
-             <p style={{color: '#8d929b', marginBottom: '20px'}}>Musisz się zalogować, aby zobaczyć watchlistę.</p>
-             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold'}}>Zaloguj się</Link>
+            <h2 style={{ color: '#fff' }}>Dostęp zabroniony</h2>
+            <p style={{ color: '#8d929b', marginBottom: '20px' }}>Musisz się zalogować, aby zobaczyć watchlistę.</p>
+            <Link to="/login" style={{ color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold' }}>Zaloguj się</Link>
           </div>
         </div>
       </>
@@ -146,16 +147,20 @@ export function WatchlistPage() {
       <Header activeTab="watchlist" refreshAction={handleRefresh} />
 
       <div style={pageWrapperStyle}>
-        
-        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
-        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
+
+        {msg && (
+          <Notification message={msg} type="success" onClose={() => setMsg(null)} />
+        )}
+        {err && (
+          <Notification message={err} type="error" onClose={() => setErr(null)} />
+        )}
 
         <div style={panelStyle}>
           <div style={headerTitleStyle}>My Watchlist</div>
 
           {items.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
-              Your watchlist is empty. Go to <Link to="/listings" style={{color: '#26cc62'}}>Search Assets</Link> to add some.
+              Your watchlist is empty. Go to <Link to="/listings" style={{ color: '#26cc62' }}>Search Assets</Link> to add some.
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
@@ -165,65 +170,65 @@ export function WatchlistPage() {
                     <th style={tableHeaderStyle}>Symbol</th>
                     <th style={tableHeaderStyle}>Name</th>
                     <th style={tableHeaderStyle}>Exchange</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Price</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Time</th>
-                    <th style={{...tableHeaderStyle, textAlign: 'right'}}>Actions</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Price</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Time</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((x) => {
                     const q = quotes[x.listing_id];
-                    
+
                     return (
                       <tr key={x.id}>
-                        <td style={{...tableCellStyle, fontWeight: 700, color: '#fff'}}>
+                        <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>
                           {x.ticker ?? "—"}
                         </td>
                         <td style={tableCellStyle}>{x.name}</td>
                         <td style={tableCellStyle}>
-                          {x.venue_code} <span style={{color: '#8d929b', fontSize: '11px'}}>{x.venue_name}</span>
+                          {x.venue_code} <span style={{ color: '#8d929b', fontSize: '11px' }}>{x.venue_name}</span>
                         </td>
-                        
+
                         {/* PRICE COLUMN */}
-                        <td style={{...tableCellStyle, textAlign: 'right', fontWeight: 600}}>
-                          {q?.loading && <span style={{color: '#8d929b'}}>...</span>}
-                          
+                        <td style={{ ...tableCellStyle, textAlign: 'right', fontWeight: 600 }}>
+                          {q?.loading && <span style={{ color: '#8d929b' }}>...</span>}
+
                           {!q?.loading && q?.error && (
-                             <span style={{color: '#ff4d4d', fontSize: '11px'}}>Error</span>
+                            <span style={{ color: '#ff4d4d', fontSize: '11px' }}>Error</span>
                           )}
 
                           {!q?.loading && !q?.error && q?.data ? (
-                             <span style={{color: '#ffffff'}}>{fmtMoney(q.data.price)}</span>
+                            <span style={{ color: '#ffffff' }}>{fmtMoney(q.data.price)}</span>
                           ) : null}
-                          
-                          {!q?.loading && !q?.error && !q?.data && <span style={{color: '#8d929b'}}>—</span>}
+
+                          {!q?.loading && !q?.error && !q?.data && <span style={{ color: '#8d929b' }}>—</span>}
                         </td>
 
                         {/* TIME COLUMN */}
-                        <td style={{...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px'}}>
-                           {q?.data?.timestamp ? new Date(q.data.timestamp).toLocaleTimeString() : "—"}
+                        <td style={{ ...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px' }}>
+                          {q?.data?.timestamp ? new Date(q.data.timestamp).toLocaleTimeString() : "—"}
                         </td>
 
                         {/* ACTIONS COLUMN */}
-                        <td style={{...tableCellStyle, textAlign: 'right'}}>
-                           <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
-                             <Link 
-                               to={`/chart/${x.listing_id}`} 
-                               style={actionBtnStyle('chart')}
-                             >
-                               CHART
-                             </Link>
-                             <button 
-                               onClick={() => onRemove(x.id)}
-                               style={{
-                                 ...actionBtnStyle('remove'),
-                                 display: 'inline-flex', 
-                                 alignItems: 'center'
-                               }}
-                             >
-                               REMOVE
-                             </button>
-                           </div>
+                        <td style={{ ...tableCellStyle, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <Link
+                              to={`/chart/${x.listing_id}`}
+                              style={actionBtnStyle('chart')}
+                            >
+                              CHART
+                            </Link>
+                            <button
+                              onClick={() => onRemove(x.id)}
+                              style={{
+                                ...actionBtnStyle('remove'),
+                                display: 'inline-flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              REMOVE
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

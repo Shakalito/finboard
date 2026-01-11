@@ -7,6 +7,7 @@ type AuthState = {
   user: UserRead | null;
   isLoading: boolean;
   error: string | null;
+  sessionExpired?: boolean;
 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
@@ -20,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserRead | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   async function refreshMe(currentToken?: string) {
     const t = currentToken ?? tokenState;
@@ -35,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signIn(email: string, password: string) {
     setIsLoading(true);
     setError(null);
+    setSessionExpired(false);
     try {
       const res = await apiLogin({ email, password });
       setToken(res.access_token);
@@ -62,7 +66,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (e: any) {
         // invalid token/expired → log out
         signOut();
-        setError(e?.message ?? "Auth error");
+        // If it was a credential validation error, it likely means expired.
+        // We set a special flag so UI can optionally show "Session expired"
+        if (e?.message?.includes('validate credentials') || e?.message?.includes('401')) {
+          setSessionExpired(true);
+        } else {
+          setError(e?.message ?? "Auth error");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -75,10 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isLoading,
     error,
+    sessionExpired,
     signIn,
     signOut,
     refreshMe,
-  }), [tokenState, user, isLoading, error]);
+  }), [tokenState, user, isLoading, error, sessionExpired]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

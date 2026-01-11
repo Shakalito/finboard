@@ -4,9 +4,10 @@ import { addToWatchlist } from "../api/watchlist";
 import { useAuth } from "../auth/AuthContext";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 export function ListingsPage() {
-  const { token } = useAuth(); 
+  const { token } = useAuth();
 
   const [q, setQ] = useState("");
   const [items, setItems] = useState<ListingSummary[]>([]);
@@ -20,7 +21,7 @@ export function ListingsPage() {
     setMsg(null);
     setLoading(true);
     try {
-      const res = await searchListings(q, 50); 
+      const res = await searchListings(q, 50);
       setItems(res);
     } catch (e: any) {
       setErr(e?.message ?? "Search error");
@@ -43,7 +44,7 @@ export function ListingsPage() {
       setErr("You must be logged in to add to watchlist.");
       return;
     }
-    
+
     setActionLoadingId(listingId);
     try {
       await addToWatchlist(token, { listing_id: listingId });
@@ -155,9 +156,13 @@ export function ListingsPage() {
       <Header activeTab="listings" />
 
       <div style={pageWrapperStyle}>
-        
-        {msg && <div style={{padding: '12px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', marginBottom: '20px'}}>{msg}</div>}
-        {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', marginBottom: '20px'}}>{err}</div>}
+
+        {msg && (
+          <Notification message={msg} type="success" onClose={() => setMsg(null)} />
+        )}
+        {err && (
+          <Notification message={err} type="error" onClose={() => setErr(null)} />
+        )}
 
         <div style={panelStyle}>
           <div style={headerTitleStyle}>Search Instruments</div>
@@ -175,8 +180,8 @@ export function ListingsPage() {
               {loading ? "SEARCHING..." : "SEARCH"}
             </button>
           </div>
-          <div style={{fontSize: '12px', color: '#64748b', marginBottom: '12px'}}>
-             Try searching for: AAPL, TSLA, MSFT, BTC, EURUSD...
+          <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+            Try searching for: AAPL, TSLA, MSFT, BTC, EURUSD...
           </div>
 
           <div style={{ overflowX: "auto" }}>
@@ -187,43 +192,43 @@ export function ListingsPage() {
                   <th style={tableHeaderStyle}>Company Name</th>
                   <th style={tableHeaderStyle}>Exchange</th>
                   <th style={tableHeaderStyle}>Currency</th>
-                  <th style={{...tableHeaderStyle, textAlign: 'right'}}>Action</th>
+                  <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 && !loading && (
-                    <tr>
-                        <td colSpan={5} style={{padding: '40px', textAlign: 'center', color: '#8d929b'}}>
-                           No results found. Try a different search query.
-                        </td>
-                    </tr>
+                  <tr>
+                    <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
+                      No results found. Try a different search query.
+                    </td>
+                  </tr>
                 )}
-                
+
                 {items.map((x) => {
                   const isAdding = actionLoadingId === x.id;
                   return (
                     <tr key={x.id}>
-                      <td style={{...tableCellStyle, fontWeight: 700, color: '#fff'}}>
+                      <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>
                         {x.ticker ?? "—"}
                       </td>
                       <td style={tableCellStyle}>{x.name}</td>
                       <td style={tableCellStyle}>
-                        {x.venue_code} <span style={{fontSize: '11px', color: '#64748b'}}>{x.venue_name}</span>
+                        {x.venue_code} <span style={{ fontSize: '11px', color: '#64748b' }}>{x.venue_name}</span>
                       </td>
                       <td style={tableCellStyle}>{x.currency ?? "-"}</td>
-                      <td style={{...tableCellStyle, textAlign: 'right'}}>
-                        <button 
-                            onClick={() => onAdd(x.id)} 
-                            disabled={!token || isAdding}
-                            style={{
-                                ...addBtnStyle,
-                                backgroundColor: !token ? '#2a2e39' : '#3b82f6',
-                                color: !token ? '#64748b' : '#fff',
-                                cursor: !token || isAdding ? 'not-allowed' : 'pointer',
-                                opacity: isAdding ? 0.7 : 1
-                            }}
+                      <td style={{ ...tableCellStyle, textAlign: 'right' }}>
+                        <button
+                          onClick={() => onAdd(x.id)}
+                          disabled={!token || isAdding}
+                          style={{
+                            ...addBtnStyle,
+                            backgroundColor: !token ? '#2a2e39' : '#3b82f6',
+                            color: !token ? '#64748b' : '#fff',
+                            cursor: !token || isAdding ? 'not-allowed' : 'pointer',
+                            opacity: isAdding ? 0.7 : 1
+                          }}
                         >
-                            {isAdding ? "ADDING..." : "ADD TO WATCHLIST"}
+                          {isAdding ? "ADDING..." : "ADD TO WATCHLIST"}
                         </button>
                       </td>
                     </tr>

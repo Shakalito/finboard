@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { searchListings, type ListingSummary } from "../api/refdata";
 
 type Props = {
@@ -23,7 +23,7 @@ export function ListingDropdown({
   placeholder = "Search ticker...",
   limit = 20,
 }: Props) {
-  const formatDisplay = (item: ListingSummary) => 
+  const formatDisplay = (item: ListingSummary) =>
     item.ticker ? `${item.ticker} — ${item.name}` : item.name;
 
   const [query, setQuery] = useState<string>("");
@@ -45,7 +45,7 @@ export function ListingDropdown({
     }
   }, [value]);
 
-  const canSearch = useMemo(() => debouncedQuery.trim().length >= 1, [debouncedQuery]);
+  const canSearch = true; // Always allow search to support "instant" results on click
 
   useEffect(() => {
     if (isSelectionUpdate.current) {
@@ -57,7 +57,10 @@ export function ListingDropdown({
 
     async function run() {
       setErr(null);
-      if (!canSearch) {
+      if (cancelled) return;
+
+      // Only search if the dropdown is open (user has focused/clicked)
+      if (!isOpen) {
         setItems([]);
         return;
       }
@@ -68,7 +71,7 @@ export function ListingDropdown({
         if (cancelled) return;
         setItems(res);
         setHighlightedIndex(-1);
-        setIsOpen(true);
+        // setIsOpen(true); // Already true if we passed the check above
       } catch (e: any) {
         if (cancelled) return;
         setErr(e?.message ?? "Error loading listings");
@@ -80,7 +83,7 @@ export function ListingDropdown({
 
     run();
     return () => { cancelled = true; };
-  }, [debouncedQuery, limit, canSearch]);
+  }, [debouncedQuery, limit, isOpen]);
 
   useEffect(() => {
     function onDocDown(ev: MouseEvent) {
@@ -111,8 +114,8 @@ export function ListingDropdown({
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (!isOpen) {
-        if (e.key === "ArrowDown") setIsOpen(true);
-        return;
+      if (e.key === "ArrowDown") setIsOpen(true);
+      return;
     }
     switch (e.key) {
       case "ArrowDown":
@@ -135,7 +138,7 @@ export function ListingDropdown({
     }
   }
 
-  
+
   const styles = {
     container: {
       position: "relative" as const,
@@ -145,14 +148,14 @@ export function ListingDropdown({
     row: {
       display: "flex",
       gap: "8px",
-      height: "40px", 
+      height: "40px",
     },
     input: {
       flex: 1,
       padding: "0 12px",
       fontSize: "14px",
       backgroundColor: "#131722",
-      border: isOpen ? "1px solid #26cc62" : "1px solid #434651", 
+      border: isOpen ? "1px solid #26cc62" : "1px solid #434651",
       borderRadius: "4px",
       color: "#ffffff",
       outline: "none",
@@ -179,7 +182,7 @@ export function ListingDropdown({
       left: 0,
       right: 0,
       zIndex: 100,
-      backgroundColor: "#1e222d", 
+      backgroundColor: "#1e222d",
       border: "1px solid #434651",
       borderRadius: "4px",
       boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
@@ -217,14 +220,14 @@ export function ListingDropdown({
             setQuery(e.target.value);
             setIsOpen(true);
           }}
-          onFocus={() => { if (query.length > 0) setIsOpen(true); }}
+          onFocus={() => setIsOpen(true)}
           style={styles.input}
         />
-        
-        
+
+
         {(query || value) && (
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={clear}
             style={styles.clearBtn}
             onMouseEnter={() => setHoverClear(true)}
@@ -236,7 +239,7 @@ export function ListingDropdown({
       </div>
 
       <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8, minHeight: 18 }}>
-        {loading && <span style={{color: '#8d929b'}}>Searching...</span>}
+        {loading && <span style={{ color: '#8d929b' }}>Searching...</span>}
         {!loading && err && <span style={{ color: "#ff4d4d" }}>{err}</span>}
       </div>
 
@@ -252,7 +255,7 @@ export function ListingDropdown({
                 style={styles.item(isHighlighted)}
               >
                 <div style={styles.ticker}>
-                  {it.ticker ?? ""} <span style={{fontWeight: 400, color: '#d1d4dc'}}>— {it.name}</span>
+                  {it.ticker ?? ""} <span style={{ fontWeight: 400, color: '#d1d4dc' }}>— {it.name}</span>
                 </div>
                 <div style={styles.meta}>
                   {it.venue_code} • {it.venue_name}
@@ -260,9 +263,9 @@ export function ListingDropdown({
               </div>
             );
           })}
-          
+
           {items.length === 0 && query.length > 0 && (
-             <div style={{padding: 12, color: '#8d929b', textAlign: 'center'}}>No results found.</div>
+            <div style={{ padding: 12, color: '#8d929b', textAlign: 'center' }}>No results found.</div>
           )}
         </div>
       )}

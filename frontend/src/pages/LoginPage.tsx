@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 export function LoginPage() {
-  const { signIn, token } = useAuth();
+  const { signIn, token, sessionExpired } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -12,10 +13,17 @@ export function LoginPage() {
   const [password, setPassword] = useState("password123");
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(location.state?.message || null);
-  
+
   const [isHovered, setIsHovered] = useState(false);
 
   const from = location.state?.from?.pathname || "/me";
+
+  // If session expired, show message once
+  useEffect(() => {
+    if (sessionExpired) {
+      setMsg("Your session has expired. Please log in again.");
+    }
+  }, [sessionExpired]);
 
   useEffect(() => {
     if (token) {
@@ -39,8 +47,8 @@ export function LoginPage() {
     minHeight: "100vh",
     backgroundColor: "#131722",
     display: "flex",
-    flexDirection: "column", 
-    color: "#000000ff", 
+    flexDirection: "column",
+    color: "#000000ff",
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
     padding: "24px",
     boxSizing: "border-box",
@@ -55,7 +63,7 @@ export function LoginPage() {
     borderRadius: "4px",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
     border: "1px solid #2a2e39",
-    margin: "auto", 
+    margin: "auto",
     marginBottom: "40px",
   };
 
@@ -109,32 +117,32 @@ export function LoginPage() {
   return (
     <div style={pageWrapperStyle}>
       <div style={containerStyle}>
-        <h2 style={headerStyle}>Login to <span style={{color: "#26cc62"}}>FINBOARD</span></h2>
-        
+        <h2 style={headerStyle}>Login to <span style={{ color: "#26cc62" }}>FINBOARD</span></h2>
+
         <form onSubmit={onSubmit} style={formStyle}>
           <div>
-            <label style={{display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b'}}>E-mail</label>
-            <input 
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b' }}>E-mail</label>
+            <input
               style={inputStyle}
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              placeholder="Wprowadź e-mail" 
-            />
-          </div>
-          
-          <div>
-            <label style={{display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b'}}>Hasło</label>
-            <input 
-              style={inputStyle}
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Wprowadź hasło" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Wprowadź e-mail"
             />
           </div>
 
-          <button 
-            style={buttonStyle} 
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b' }}>Hasło</label>
+            <input
+              style={inputStyle}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Wprowadź hasło"
+            />
+          </div>
+
+          <button
+            style={buttonStyle}
             type="submit"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -143,10 +151,8 @@ export function LoginPage() {
           </button>
         </form>
 
-        {msg && <p style={{ marginTop: 20, textAlign: "center", fontSize: "14px", color: "#8d929b" }}>{msg}</p>}
-        {err && <div style={{ marginTop: 20, padding: "10px", backgroundColor: "rgba(255, 77, 77, 0.1)", border: "1px solid #ff4d4d", borderRadius: "4px", textAlign: "center" }}>
-             <p style={{ margin: 0, fontSize: "14px", color: "#ff4d4d" }}>{err}</p>
-          </div>}
+        {msg && <Notification message={msg} type="success" onClose={() => setMsg(null)} duration={10000} />}
+        {err && <Notification message={err} type="error" onClose={() => setErr(null)} />}
 
         <p style={{ marginTop: 30, textAlign: "center", fontSize: "14px", color: "#8d929b" }}>
           Nie masz konta? <a href="/register" style={linkStyle}>Zarejestruj się</a>
