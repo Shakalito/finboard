@@ -45,8 +45,6 @@ export function ListingDropdown({
     }
   }, [value]);
 
-  const canSearch = true; // Always allow search to support "instant" results on click
-
   useEffect(() => {
     if (isSelectionUpdate.current) {
       isSelectionUpdate.current = false;
