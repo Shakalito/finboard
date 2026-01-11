@@ -11,6 +11,11 @@ export type OrderRead = {
   state: string;
   created_at: string;
   updated_at: string;
+  // enriched
+  ticker?: string;
+  instrument_name?: string;
+  venue_code?: string;
+  venue_name?: string;
 };
 
 export type ExecutionRead = {
@@ -21,6 +26,11 @@ export type ExecutionRead = {
   fee: number;
   fee_currency: string | null;
   executed_at: string;
+  // enriched
+  ticker?: string;
+  instrument_name?: string;
+  venue_code?: string;
+  venue_name?: string;
 };
 
 export async function getMyOrders(token: string, accountId?: string): Promise<OrderRead[]> {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { getOhlcv, type OhlcvResponse } from "../api/ohlcv";
+import { getListing, type ListingDetail } from "../api/refdata";
 import { LineCloseChart } from "../charts/LineCloseChart";
 import { CandlestickChart } from "../charts/CandlestickChart";
 import { sma, rsi } from "../marketdata/indicators";
@@ -23,6 +24,7 @@ export function ChartPage() {
   const navigate = useNavigate();
 
   const [data, setData] = useState<OhlcvResponse | null>(null);
+  const [listing, setListing] = useState<ListingDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [range, setRange] = useState<RangeKey>("1y");
   const [showRsi, setShowRsi] = useState(false);
@@ -52,19 +54,24 @@ export function ChartPage() {
   useEffect(() => {
 
     if (!token) {
-        navigate("/login");
-        return;
+      navigate("/login");
+      return;
     }
 
     (async () => {
       if (!listingId) return;
       setErr(null);
       setData(null);
+      setListing(null);
       try {
-        const res = await getOhlcv(listingId, query);
-        setData(res);
+        const [ohlcvRes, listingRes] = await Promise.all([
+          getOhlcv(listingId, query),
+          getListing(listingId)
+        ]);
+        setData(ohlcvRes);
+        setListing(listingRes);
       } catch (e: any) {
-        setErr(e?.message ?? "OHLCV error");
+        setErr(e?.message ?? "Error loading chart data");
       }
     })();
   }, [listingId, query, token, navigate]);
@@ -138,7 +145,7 @@ export function ChartPage() {
     fontSize: "13px",
     fontWeight: 600,
     cursor: "pointer",
-    backgroundColor: isActive ? "#3b82f6" : "#2a2e39", 
+    backgroundColor: isActive ? "#3b82f6" : "#2a2e39",
     color: isActive ? "#ffffff" : "#8d929b",
     border: isActive ? "1px solid #3b82f6" : "1px solid #434651",
     borderRadius: "4px",
@@ -163,98 +170,99 @@ export function ChartPage() {
       <Header activeTab="none" />
 
       <div style={pageWrapperStyle}>
-        
+
         {/* SUB-NAV */}
         <div style={subNavStyle}>
-           <Link to="/watchlist" style={backLinkStyle}>&larr; Back to Watchlist</Link>
-           <span style={{color: '#434651'}}>|</span>
-           <Link to="/portfolio" style={backLinkStyle}>Portfolio</Link>
+          <Link to="/watchlist" style={backLinkStyle}>&larr; Back to Watchlist</Link>
+          <span style={{ color: '#434651' }}>|</span>
+          <Link to="/portfolio" style={backLinkStyle}>Portfolio</Link>
         </div>
 
         <div style={panelStyle}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px'}}>
-                <div>
-                    <h2 style={headerTitleStyle}>
-                        Technical Analysis <span style={{color: '#26cc62'}}>{listingId}</span>
-                    </h2>
-                    <div style={{fontSize: '13px', color: '#8d929b'}}>
-                        Daily interval • {range.toUpperCase()} Range
-                    </div>
-                </div>
-
-                <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap'}}>
-                    <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
-                        <span style={{fontSize: '12px', color: '#8d929b', marginRight: '4px'}}>Range:</span>
-                        {(["3m", "6m", "1y", "5y"] as RangeKey[]).map((r) => (
-                            <button 
-                                key={r}
-                                onClick={() => setRange(r)} 
-                                style={rangeBtnStyle(range === r)}
-                            >
-                                {r.toUpperCase()}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
-                         <span style={{fontSize: '12px', color: '#8d929b', marginRight: '4px'}}>Indicators:</span>
-                         <button 
-                            onClick={() => setShowRsi(!showRsi)}
-                            style={toggleBtnStyle(showRsi)}
-                         >
-                            {showRsi ? "Hide RSI" : "Show RSI"}
-                         </button>
-                    </div>
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={headerTitleStyle}>
+                <span style={{ color: '#26cc62' }}>{listing ? listing.ticker : 'Loading...'}</span>
+                {listing && <span style={{ fontWeight: 400, color: '#8d929b', marginLeft: '10px' }}>{listing.name}</span>}
+              </h2>
+              <div style={{ fontSize: '13px', color: '#8d929b' }}>
+                Daily interval • {range.toUpperCase()} Range
+              </div>
             </div>
 
-            {err && <div style={{padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px'}}>{err}</div>}
-            
-            {!err && !data && (
-                <div style={{padding: '60px', textAlign: 'center', color: '#8d929b'}}>
-                    Loading chart data...
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#8d929b', marginRight: '4px' }}>Range:</span>
+                {(["3m", "6m", "1y", "5y"] as RangeKey[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRange(r)}
+                    style={rangeBtnStyle(range === r)}
+                  >
+                    {r.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#8d929b', marginRight: '4px' }}>Indicators:</span>
+                <button
+                  onClick={() => setShowRsi(!showRsi)}
+                  style={toggleBtnStyle(showRsi)}
+                >
+                  {showRsi ? "Hide RSI" : "Show RSI"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {err && <div style={{ padding: '12px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px' }}>{err}</div>}
+
+          {!err && !data && (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#8d929b' }}>
+              Loading chart data...
+            </div>
+          )}
+
+          {data && data.points.length === 0 && (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#8d929b' }}>
+              No OHLCV data available for this asset.
+            </div>
+          )}
+
+          {data && data.points.length > 0 && (
+            <>
+              <div>
+                <div style={chartTitleStyle}>Candlestick Chart</div>
+                <div style={{ height: '400px', width: '100%' }}>
+                  <CandlestickChart points={data.points} />
                 </div>
-            )}
+              </div>
 
-            {data && data.points.length === 0 && (
-                 <div style={{padding: '60px', textAlign: 'center', color: '#8d929b'}}>
-                    No OHLCV data available for this asset.
-                 </div>
-            )}
+              <div style={{ borderTop: '1px solid #2a2e39', paddingTop: '20px' }}>
+                <div style={chartTitleStyle}>Moving Averages (SMA 20/50)</div>
+                <div style={{ height: '350px', width: '100%' }}>
+                  <LineCloseChart
+                    points={data.points}
+                    sma20={sma20}
+                    sma50={sma50}
+                  />
+                </div>
+              </div>
 
-            {data && data.points.length > 0 && (
-                <>
-                    <div>
-                        <div style={chartTitleStyle}>Candlestick Chart</div>
-                        <div style={{height: '400px', width: '100%'}}>
-                             <CandlestickChart points={data.points} />
-                        </div>
-                    </div>
-
-                    <div style={{borderTop: '1px solid #2a2e39', paddingTop: '20px'}}>
-                        <div style={chartTitleStyle}>Moving Averages (SMA 20/50)</div>
-                        <div style={{height: '350px', width: '100%'}}>
-                            <LineCloseChart
-                                points={data.points}
-                                sma20={sma20}
-                                sma50={sma50}
-                            />
-                        </div>
-                    </div>
-
-                    {showRsi && (
-                        <div style={{borderTop: '1px solid #2a2e39', paddingTop: '20px'}}>
-                            <div style={chartTitleStyle}>Relative Strength Index (14)</div>
-                            <div style={{height: '200px', width: '100%'}}>
-                                <RsiChart
-                                    timestamps={data.points.map((p) => p.ts)}
-                                    rsi={rsi14 ?? []}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
+              {showRsi && (
+                <div style={{ borderTop: '1px solid #2a2e39', paddingTop: '20px' }}>
+                  <div style={chartTitleStyle}>Relative Strength Index (14)</div>
+                  <div style={{ height: '200px', width: '100%' }}>
+                    <RsiChart
+                      timestamps={data.points.map((p) => p.ts)}
+                      rsi={rsi14 ?? []}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <Footer />

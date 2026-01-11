@@ -3,14 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 
-export type ActiveTab = 
-  | "dashboard" 
-  | "watchlist" 
-  | "listings" 
-  | "orders" 
-  | "history" 
-  | "alerts" 
-  | "deposit" 
+export type ActiveTab =
+  | "dashboard"
+  | "watchlist"
+  | "listings"
+  | "orders"
+  | "history"
+  | "alerts"
+  | "deposit"
   | "none";
 
 type Props = {
@@ -79,7 +79,7 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
 
   const depositLinkStyle = (isActive: boolean): CSSProperties => ({
     ...subNavLinkStyle(isActive),
-    color: isActive ? "#ffffff" : "#26cc62", 
+    color: isActive ? "#ffffff" : "#26cc62",
     fontWeight: 600,
   });
 
@@ -98,33 +98,37 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
     <>
 
       <nav style={navStyle}>
-        <div style={{display: 'flex', gap: '30px', alignItems: 'center'}}>
+        <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
           <Link to="/" style={navLogoStyle}>
             FINBOARD
           </Link>
-          <div style={{display: 'flex', gap: '20px'}}>
-             <Link to="/portfolio" style={{color: '#ffffff', textDecoration: 'none', fontSize: '14px', fontWeight: 600}}>TRADING</Link>
-             <Link to="/me" style={{color: '#8d929b', textDecoration: 'none', fontSize: '14px', fontWeight: 500}}>ACCOUNT</Link>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <Link to="/portfolio" style={{ color: '#ffffff', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>TRADING</Link>
+            <Link to="/me" style={{ color: '#ffffff', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>ACCOUNT</Link>
           </div>
         </div>
-        
+
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-           {user && <span style={{ fontSize: "13px", color: "#8d929b" }}>{user.email}</span>}
-           <button 
-             onClick={() => { signOut(); navigate("/login"); }}
-             style={{
-               background: 'transparent',
-               border: '1px solid #ff4d4d',
-               color: '#ff4d4d',
-               padding: '6px 12px',
-               borderRadius: '4px',
-               cursor: 'pointer',
-               fontSize: '12px',
-               fontWeight: 'bold'
-             }}
-           >
-             LOGOUT
-           </button>
+          {user && (
+            <Link to="/me" style={{ fontSize: "14px", fontWeight: 600, color: "#ffffff", textDecoration: "none", cursor: "pointer" }}>
+              {user.email}
+            </Link>
+          )}
+          <button
+            onClick={() => { signOut(); navigate("/login"); }}
+            style={{
+              background: 'transparent',
+              border: '1px solid #ff4d4d',
+              color: '#ff4d4d',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            LOGOUT
+          </button>
         </div>
       </nav>
 
@@ -138,10 +142,10 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
         <Link to="/alerts" style={subNavLinkStyle(activeTab === 'alerts')}>Alerts</Link>
 
         <Link to="/portfolio/deposit" style={depositLinkStyle(activeTab === 'deposit')}>Deposit</Link>
-        
+
         {refreshAction && (
-          <button 
-            onClick={refreshAction} 
+          <button
+            onClick={refreshAction}
             disabled={refreshLoading}
             style={refreshBtnStyle}
           >
@@ -150,7 +154,7 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
         )}
       </div>
 
-      
+
       <div style={{ height: "110px" }} />
     </>
   );

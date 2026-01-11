@@ -27,9 +27,13 @@ export function LoginPage() {
 
   useEffect(() => {
     if (token) {
+      if (location.state?.message) {
+        // If we have a message (e.g. from RequireAuth but token appeared), clear it?
+        // Actually if token is present we redirect, so main thing is navigation
+      }
       navigate(from, { replace: true });
     }
-  }, [token, navigate, from]);
+  }, [token, navigate, from, location.state]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,18 +130,18 @@ export function LoginPage() {
               style={inputStyle}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Wprowadź e-mail"
+              placeholder="Enter e-mail"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b' }}>Hasło</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8d929b' }}>Password</label>
             <input
               style={inputStyle}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Wprowadź hasło"
+              placeholder="Enter password"
             />
           </div>
 
@@ -147,7 +151,7 @@ export function LoginPage() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            Zaloguj się
+            Sign In
           </button>
         </form>
 
@@ -155,7 +159,7 @@ export function LoginPage() {
         {err && <Notification message={err} type="error" onClose={() => setErr(null)} />}
 
         <p style={{ marginTop: 30, textAlign: "center", fontSize: "14px", color: "#8d929b" }}>
-          Nie masz konta? <a href="/register" style={linkStyle}>Zarejestruj się</a>
+          Don't have an account? <a href="/register" style={linkStyle}>Sign Up</a>
         </p>
       </div>
 

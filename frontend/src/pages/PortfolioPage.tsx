@@ -397,8 +397,13 @@ export function PortfolioPage() {
                     <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Quick Deposit</label>
                     <input
                       value={depAmount}
-                      onChange={(e) => setDepAmount(e.target.value)}
+                      onChange={(e) => {
+                        setDepAmount(e.target.value);
+                        setMsg(null);
+                        setErr(null);
+                      }}
                       placeholder="Amount"
+                      type="number"
                       style={inputStyle}
                     />
                   </div>
@@ -454,7 +459,11 @@ export function PortfolioPage() {
                 }}>
                   <input
                     value={qty}
-                    onChange={(e) => setQty(e.target.value)}
+                    onChange={(e) => {
+                      setQty(e.target.value);
+                      setMsg(null);
+                      setErr(null);
+                    }}
                     placeholder="1"
                     type="number"
                     min="1"

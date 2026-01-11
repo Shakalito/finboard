@@ -8,6 +8,7 @@ type AuthState = {
   isLoading: boolean;
   error: string | null;
   sessionExpired?: boolean;
+  userInitiatedLogout?: boolean;
 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
@@ -23,6 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const [sessionExpired, setSessionExpired] = useState(false);
+  // NEW: Track if logout was explicit
+  const [userInitiatedLogout, setUserInitiatedLogout] = useState(false);
 
   async function refreshMe(currentToken?: string) {
     const t = currentToken ?? tokenState;
@@ -39,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     setSessionExpired(false);
+    setUserInitiatedLogout(false); // Reset on login attempt
     try {
       const res = await apiLogin({ email, password });
       setToken(res.access_token);
@@ -52,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function signOut() {
+    setUserInitiatedLogout(true); // Mark as explicit logout
     clearToken();
     setTokenState(null);
     setUser(null);
@@ -61,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // on application startup: if token is in localStorage, get /me
     (async () => {
       setIsLoading(true);
+      setUserInitiatedLogout(false); // Reset on app load
       try {
         if (tokenState) await refreshMe();
       } catch (e: any) {
@@ -86,10 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     error,
     sessionExpired,
+    userInitiatedLogout,
     signIn,
     signOut,
     refreshMe,
-  }), [tokenState, user, isLoading, error, sessionExpired]);
+  }), [tokenState, user, isLoading, error, sessionExpired, userInitiatedLogout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

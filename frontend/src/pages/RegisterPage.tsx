@@ -23,9 +23,9 @@ export function RegisterPage() {
         email,
         password,
       });
-      setMsg(`Sukces! Utworzono użytkownika: ${u.email}`);
+      setMsg(`Success! User created: ${u.email}`);
     } catch (e: any) {
-      setErr(e?.message ?? "Błąd rejestracji");
+      setErr(e?.message ?? "Registration error");
     }
   }
 
@@ -34,10 +34,10 @@ export function RegisterPage() {
     backgroundColor: "#131722",
     display: "flex",
     flexDirection: "column",
-  
+
     color: "#d1d4dc",
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
-    padding: "24px", 
+    padding: "24px",
     boxSizing: "border-box",
   };
 
@@ -50,8 +50,8 @@ export function RegisterPage() {
     borderRadius: "4px",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
     border: "1px solid #2a2e39",
-    margin: "auto", 
-    marginBottom: "40px", 
+    margin: "auto",
+    marginBottom: "40px",
   };
 
   const headerStyle: React.CSSProperties = {
@@ -119,60 +119,60 @@ export function RegisterPage() {
     <div style={pageWrapperStyle}>
       <div style={containerStyle}>
         <h2 style={headerStyle}>
-          Otwórz konto w <span style={{color: '#26cc62'}}>FINBOARD</span>
+          Create account in <span style={{ color: '#26cc62' }}>FINBOARD</span>
         </h2>
-        
+
         <form onSubmit={onSubmit} style={formStyle}>
-          
+
           <div style={gridRowStyle}>
             <div>
-              <label style={labelStyle}>Imię</label>
-              <input 
+              <label style={labelStyle}>First Name</label>
+              <input
                 style={inputStyle}
-                value={firstName} 
-                onChange={(e) => setFirstName(e.target.value)} 
-                placeholder="Jan" 
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Jan"
               />
             </div>
             <div>
-              <label style={labelStyle}>Nazwisko</label>
-              <input 
+              <label style={labelStyle}>Last Name</label>
+              <input
                 style={inputStyle}
-                value={lastName} 
-                onChange={(e) => setLastName(e.target.value)} 
-                placeholder="Kowalski" 
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Kowalski"
               />
             </div>
           </div>
 
           <div>
-            <label style={labelStyle}>Adres e-mail</label>
-            <input 
+            <label style={labelStyle}>E-mail</label>
+            <input
               style={inputStyle}
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              placeholder="jan@example.com" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jan@example.com"
             />
           </div>
 
           <div>
-            <label style={labelStyle}>Hasło</label>
-            <input 
+            <label style={labelStyle}>Password</label>
+            <input
               style={inputStyle}
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="••••••••" 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             style={buttonStyle}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            Zarejestruj się
+            Sign Up
           </button>
         </form>
 
@@ -181,18 +181,18 @@ export function RegisterPage() {
             <p style={{ margin: 0, fontSize: "14px", color: "#26cc62" }}>{msg}</p>
           </div>
         )}
-        
+
         {err && (
           <div style={{ marginTop: 20, padding: "10px", backgroundColor: "rgba(255, 77, 77, 0.1)", border: "1px solid #ff4d4d", borderRadius: "4px", textAlign: "center" }}>
-             <p style={{ margin: 0, fontSize: "14px", color: "#ff4d4d" }}>{err}</p>
+            <p style={{ margin: 0, fontSize: "14px", color: "#ff4d4d" }}>{err}</p>
           </div>
         )}
 
         <p style={{ marginTop: 30, textAlign: "center", fontSize: "14px", color: "#8d929b" }}>
-          Masz już konto? <a href="/login" style={linkStyle}>Zaloguj się</a>
+          Already have an account? <a href="/login" style={linkStyle}>Sign In</a>
         </p>
       </div>
-      
+
       <Footer />
     </div>
   );

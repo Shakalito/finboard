@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { usePaperAccount } from "../portfolio/usePaperAccount";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { Notification } from "../components/Notification";
 
 export function PortfolioDepositPage() {
   const { token } = useAuth();
@@ -16,8 +17,8 @@ export function PortfolioDepositPage() {
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = useMemo(() => 
-    !!token && !!account && !accountLoading && !submitting, 
+  const canSubmit = useMemo(() =>
+    !!token && !!account && !accountLoading && !submitting,
     [token, account, accountLoading, submitting]
   );
 
@@ -64,8 +65,8 @@ export function PortfolioDepositPage() {
     fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
     color: "#d1d4dc",
     display: 'flex',
-    flexDirection: 'column', 
-   
+    flexDirection: 'column',
+
   };
 
   const panelStyle: CSSProperties = {
@@ -79,8 +80,8 @@ export function PortfolioDepositPage() {
     display: "flex",
     flexDirection: "column",
     gap: "20px",
-    margin: "0 auto", 
-    marginBottom: "40px" 
+    margin: "0 auto",
+    marginBottom: "40px"
   };
 
   const headerTitleStyle: CSSProperties = {
@@ -145,8 +146,8 @@ export function PortfolioDepositPage() {
         <Header activeTab="none" />
         <div style={{ ...pageWrapperStyle, alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-             <h2 style={{color: '#fff'}}>Dostęp zabroniony</h2>
-             <Link to="/login" style={{color: '#26cc62', textDecoration: 'none', fontWeight: 'bold'}}>Zaloguj się</Link>
+            <h2 style={{ color: '#fff' }}>Dostęp zabroniony</h2>
+            <Link to="/login" style={{ color: '#26cc62', textDecoration: 'none', fontWeight: 'bold' }}>Zaloguj się</Link>
           </div>
         </div>
       </>
@@ -159,54 +160,70 @@ export function PortfolioDepositPage() {
 
       <div style={pageWrapperStyle}>
         <div style={panelStyle}>
-          
+
           <div>
             <h2 style={headerTitleStyle}>Deposit Funds</h2>
-            <p style={{textAlign: 'center', color: '#8d929b', fontSize: '13px', margin: '4px 0 0 0'}}>
-                Add paper money to your trading account
+            <p style={{ textAlign: 'center', color: '#8d929b', fontSize: '13px', margin: '4px 0 0 0' }}>
+              Add paper money to your trading account
             </p>
           </div>
 
-          {accountError && <div style={{padding: '10px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', textAlign: 'center'}}>{accountError}</div>}
-          {msg && <div style={{padding: '10px', background: 'rgba(38, 204, 98, 0.1)', color: '#26cc62', border: '1px solid #26cc62', borderRadius: '4px', textAlign: 'center'}}>{msg}</div>}
-          {err && <div style={{padding: '10px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', textAlign: 'center'}}>{err}</div>}
+          {accountError && <div style={{ padding: '10px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', borderRadius: '4px', textAlign: 'center' }}>{accountError}</div>}
+          {msg && <Notification message={msg} type="success" onClose={() => setMsg(null)} />}
+          {err && <Notification message={err} type="error" onClose={() => setErr(null)} />}
 
           <div>
             <label style={labelStyle}>Amount to Deposit</label>
-            <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                <input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="e.g. 10000"
-                    type="number"
-                    style={inputStyle}
-                    disabled={submitting || accountLoading}
-                />
-                <span style={{
-                    position: 'absolute', 
-                    right: '16px', 
-                    color: '#8d929b', 
-                    fontWeight: 600,
-                    fontSize: '14px'
-                }}>
-                    {account?.base_currency || "USD"}
-                </span>
+            <style>{`
+                /* Chrome, Safari, Edge, Opera */
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                  -webkit-appearance: none;
+                  margin: 0;
+                }
+                /* Firefox */
+                input[type=number] {
+                  -moz-appearance: textfield;
+                }
+            `}</style>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setMsg(null);
+                  setErr(null);
+                }}
+                placeholder="e.g. 10000"
+                type="number"
+                style={inputStyle}
+                disabled={submitting || accountLoading}
+              />
+              <span style={{
+                position: 'absolute',
+                right: '16px',
+                color: '#8d929b',
+                fontWeight: 600,
+                fontSize: '14px'
+              }}>
+                {account?.base_currency || "USD"}
+              </span>
             </div>
             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-                Funds will be immediately available for trading.
+              Funds will be immediately available for trading.
             </div>
           </div>
 
-          <button 
-            onClick={onSubmit} 
+          <button
+            onClick={onSubmit}
             disabled={!canSubmit}
             style={btnStyle}
           >
             {submitting ? "PROCESSING..." : "CONFIRM DEPOSIT"}
           </button>
 
-          <Link to="/portfolio" style={{...linkStyle, justifyContent: 'center', marginTop: '10px'}}>
-             Cancel
+          <Link to="/portfolio" style={{ ...linkStyle, justifyContent: 'center', marginTop: '10px' }}>
+            Cancel
           </Link>
 
         </div>

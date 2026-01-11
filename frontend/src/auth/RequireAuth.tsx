@@ -3,10 +3,15 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-    const { token } = useAuth();
+    const { token, userInitiatedLogout } = useAuth();
     const location = useLocation();
 
     if (!token) {
+        // If user explicitly logged out, don't show "You must be logged in" message
+        if (userInitiatedLogout) {
+            return <Navigate to="/login" replace />;
+        }
+
         return (
             <Navigate
                 to="/login"

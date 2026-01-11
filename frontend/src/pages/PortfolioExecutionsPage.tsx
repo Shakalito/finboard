@@ -138,8 +138,8 @@ export function PortfolioExecutionsPage() {
                 <thead>
                   <tr>
                     <th style={tableHeaderStyle}>Executed At</th>
+                    <th style={tableHeaderStyle}>Instrument</th>
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Qty</th>
-                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Price</th>
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Fee</th>
                     <th style={tableHeaderStyle}>Order ID</th>
                     <th style={tableHeaderStyle}>Exec ID</th>
@@ -151,11 +151,17 @@ export function PortfolioExecutionsPage() {
                       <td style={{ ...tableCellStyle, color: '#8d929b', fontSize: '12px' }}>
                         {fmtDate(x.executed_at)}
                       </td>
+                      <td style={{ ...tableCellStyle, color: '#d1d4dc' }}>
+                        <div style={{ fontSize: '14px' }}>
+                          <span style={{ fontWeight: 700, color: '#fff' }}>{x.ticker || "—"}</span>
+                          <span style={{ fontWeight: 400, color: '#d1d4dc' }}> — {x.instrument_name}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#8d929b', marginTop: '2px' }}>
+                          {x.venue_code && x.venue_name ? `${x.venue_code} • ${x.venue_name}` : "—"}
+                        </div>
+                      </td>
                       <td style={{ ...tableCellStyle, textAlign: 'right', fontWeight: 700 }}>
                         {x.qty}
-                      </td>
-                      <td style={{ ...tableCellStyle, textAlign: 'right', color: '#ffffff' }}>
-                        {fmtMoney(x.price)}
                       </td>
                       <td style={{ ...tableCellStyle, textAlign: 'right', color: '#ff4d4d' }}>
                         {x.fee > 0 ? `-${fmtMoney(x.fee)}` : "0.00"} <span style={{ fontSize: '10px', color: '#8d929b' }}>{x.fee_currency}</span>

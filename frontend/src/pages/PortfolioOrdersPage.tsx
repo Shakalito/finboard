@@ -180,8 +180,8 @@ export function PortfolioOrdersPage() {
                   <tr>
                     <th style={tableHeaderStyle}>Time</th>
                     <th style={tableHeaderStyle}>Side</th>
-                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Qty</th>
                     <th style={tableHeaderStyle}>Instrument</th>
+                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Qty</th>
                     <th style={tableHeaderStyle}>Status</th>
                     <th style={tableHeaderStyle}>Order ID</th>
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Action</th>
@@ -201,11 +201,17 @@ export function PortfolioOrdersPage() {
                         <td style={{ ...tableCellStyle, fontWeight: 700, color: isBuy ? '#26cc62' : '#ff4d4d' }}>
                           {o.side}
                         </td>
+                        <td style={{ ...tableCellStyle, color: '#d1d4dc' }}>
+                          <div style={{ fontSize: '14px' }}>
+                            <span style={{ fontWeight: 700, color: '#fff' }}>{o.ticker || "—"}</span>
+                            <span style={{ fontWeight: 400, color: '#d1d4dc' }}> — {o.instrument_name || o.instrument_id}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#8d929b', marginTop: '2px' }}>
+                            {o.venue_code && o.venue_name ? `${o.venue_code} • ${o.venue_name}` : "—"}
+                          </div>
+                        </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right' }}>
                           {o.qty}
-                        </td>
-                        <td style={{ ...tableCellStyle, fontFamily: 'monospace', color: '#d1d4dc' }}>
-                          {o.instrument_id}
                         </td>
                         <td style={tableCellStyle}>
                           <span style={{

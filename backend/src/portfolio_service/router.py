@@ -267,18 +267,52 @@ def list_my_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # optional filter by account_id
-    stmt = (
-        select(Order)
+
+    query = (
+        select(Order, Instrument.name, Listing.ticker)
         .join(Account, Order.account_id == Account.id)
+        .join(Instrument, Order.instrument_id == Instrument.id)
+        .outerjoin(Listing, (Listing.instrument_id == Instrument.id) & (Listing.active.is_(True)))
+    )
+    
+    query = query.where(Account.user_id == current_user.id)
+    
+    if account_id:
+        query = query.where(Order.account_id == account_id)
+        
+    query = query.order_by(desc(Order.created_at))
+
+    stmt = (
+        select(Order, Instrument.name, Listing.ticker, Venue.code, Venue.name)
+        .join(Account, Order.account_id == Account.id)
+        .join(Instrument, Order.instrument_id == Instrument.id)
+        .outerjoin(Listing, (Listing.instrument_id == Instrument.id) & (Listing.active.is_(True)))
+        .outerjoin(Venue, Listing.venue_id == Venue.id)
         .where(Account.user_id == current_user.id)
         .order_by(desc(Order.created_at))
     )
+    
     if account_id:
         stmt = stmt.where(Order.account_id == account_id)
 
-    rows = db.execute(stmt).scalars().all()
-    return [OrderRead.model_validate(x) for x in rows]
+    rows = db.execute(stmt).all()
+    
+    results = []
+    seen_ids = set()
+    
+    for o, inst_name, ticker, v_code, v_name in rows:
+        if o.id in seen_ids:
+            continue
+        seen_ids.add(o.id)
+        
+        m = OrderRead.model_validate(o)
+        m.ticker = ticker
+        m.instrument_name = inst_name
+        m.venue_code = v_code
+        m.venue_name = v_name
+        results.append(m)
+        
+    return results
 
 
 @router.post("/orders/{order_id}/fill", response_model=ExecutionRead, status_code=status.HTTP_201_CREATED)
@@ -566,12 +600,31 @@ def get_my_executions(
     current_user: User = Depends(get_current_user),
 ):
     stmt = (
-        select(Execution)
+        select(Execution, Instrument.name, Listing.ticker, Venue.code, Venue.name)
         .join(Order, Order.id == Execution.order_id)
         .join(Account, Account.id == Order.account_id)
+        .join(Instrument, Order.instrument_id == Instrument.id)
+        .outerjoin(Listing, (Listing.instrument_id == Instrument.id) & (Listing.active.is_(True)))
+        .outerjoin(Venue, Listing.venue_id == Venue.id)
         .where(Account.user_id == current_user.id)
         .order_by(desc(Execution.executed_at))
     )
 
-    rows = db.execute(stmt).scalars().all()
-    return [ExecutionRead.model_validate(r) for r in rows]
+    rows = db.execute(stmt).all()
+    
+    results = []
+    seen_ids = set()
+    
+    for ex, inst_name, ticker, v_code, v_name in rows:
+        if ex.id in seen_ids:
+            continue
+        seen_ids.add(ex.id)
+        
+        m = ExecutionRead.model_validate(ex)
+        m.ticker = ticker
+        m.instrument_name = inst_name
+        m.venue_code = v_code
+        m.venue_name = v_name
+        results.append(m)
+        
+    return results

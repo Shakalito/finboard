@@ -18,7 +18,8 @@ export function MePage() {
     color: "#d1d4dc",
     display: "flex",
     flexDirection: "column",
-
+    justifyContent: "center", // Center vertically
+    paddingBottom: "80px", // Extra padding at bottom
   };
 
   const containerStyle: React.CSSProperties = {
@@ -30,7 +31,7 @@ export function MePage() {
     border: "1px solid #2a2e39",
     overflow: "hidden",
     margin: "0 auto",
-    marginBottom: "40px", 
+    marginBottom: "40px",
   };
 
   const headerStyle: React.CSSProperties = {
@@ -76,18 +77,7 @@ export function MePage() {
     color: "#ffffff",
   };
 
-  const preStyle: React.CSSProperties = {
-    background: "#131722",
-    color: "#a9b7c6",
-    padding: "15px",
-    borderRadius: "4px",
-    border: "1px solid #2a2e39",
-    fontFamily: "'Consolas', 'Monaco', monospace",
-    fontSize: "13px",
-    overflowX: "auto",
-    margin: "0 0 30px 0",
-    whiteSpace: "pre-wrap",
-  };
+
 
   const btnBaseStyle: React.CSSProperties = {
     padding: "10px 20px",
@@ -161,7 +151,7 @@ export function MePage() {
       <Header activeTab="none" />
 
       <div style={pageWrapperStyle}>
-        
+
         <div style={containerStyle}>
           <div style={headerStyle}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -173,7 +163,7 @@ export function MePage() {
                 </>
               )}
             </div>
-            <div style={{ fontSize: '12px', color: '#8d929b' }}>ID: {user?.id?.substring(0, 8)}...</div>
+            <div style={{ fontSize: '12px', color: '#8d929b', fontFamily: 'monospace' }}>ID: {user?.id}</div>
           </div>
 
           <div style={contentStyle}>
@@ -206,10 +196,7 @@ export function MePage() {
                   </div>
                 </div>
 
-                <span style={labelStyle}>Raw Data</span>
-                <pre style={preStyle}>
-                  {JSON.stringify(user, null, 2)}
-                </pre>
+
 
                 <div style={actionsStyle}>
                   <Link

@@ -50,6 +50,11 @@ class OrderRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    ticker: str | None = None
+    instrument_name: str | None = None
+    venue_code: str | None = None
+    venue_name: str | None = None
+
     class Config:
         from_attributes = True
 
@@ -67,6 +72,11 @@ class ExecutionRead(BaseModel):
     fee: float
     fee_currency: str | None
     executed_at: datetime
+    
+    ticker: str | None = None
+    instrument_name: str | None = None
+    venue_code: str | None = None
+    venue_name: str | None = None
 
     class Config:
         from_attributes = True
