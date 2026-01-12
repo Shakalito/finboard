@@ -203,11 +203,11 @@ export function PortfolioOrdersPage() {
                         </td>
                         <td style={{ ...tableCellStyle, color: '#d1d4dc' }}>
                           <div style={{ fontSize: '14px' }}>
-                            <span style={{ fontWeight: 700, color: '#fff' }}>{o.ticker || "—"}</span>
-                            <span style={{ fontWeight: 400, color: '#d1d4dc' }}> — {o.instrument_name || o.instrument_id}</span>
+                            <span style={{ fontWeight: 700, color: '#fff' }}>{o.ticker || "-"}</span>
+                            <span style={{ fontWeight: 400, color: '#d1d4dc' }}> - {o.instrument_name || o.instrument_id}</span>
                           </div>
                           <div style={{ fontSize: '12px', color: '#8d929b', marginTop: '2px' }}>
-                            {o.venue_code && o.venue_name ? `${o.venue_code} • ${o.venue_name}` : "—"}
+                            {o.venue_code && o.venue_name ? `${o.venue_code} • ${o.venue_name}` : "-"}
                           </div>
                         </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right' }}>
@@ -244,7 +244,7 @@ export function PortfolioOrdersPage() {
                               {actionLoadingId === o.id ? "..." : "EXECUTE"}
                             </button>
                           ) : (
-                            <span style={{ opacity: 0.3, fontSize: '18px' }}>—</span>
+                            <span style={{ opacity: 0.3, fontSize: '18px' }}>-</span>
                           )}
                         </td>
                       </tr>

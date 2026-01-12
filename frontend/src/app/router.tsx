@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { RequireAuth } from "../auth/RequireAuth";
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
@@ -14,11 +14,12 @@ import { PortfolioExecutionsPage } from "../pages/PortfolioExecutionsPage";
 
 import { AlertsPage } from "../pages/AlertsPage";
 import { NewAlertPage } from "../pages/NewAlertPage";
+import { LandingPage } from "../pages/LandingPage";
 
 
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/me" replace /> },
+  { path: "/", element: <LandingPage /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/register", element: <RegisterPage /> },
   {

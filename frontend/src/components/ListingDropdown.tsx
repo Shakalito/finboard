@@ -24,7 +24,7 @@ export function ListingDropdown({
   limit = 20,
 }: Props) {
   const formatDisplay = (item: ListingSummary) =>
-    item.ticker ? `${item.ticker} — ${item.name}` : item.name;
+    item.ticker ? `${item.ticker} - ${item.name}` : item.name;
 
   const [query, setQuery] = useState<string>("");
   const [items, setItems] = useState<ListingSummary[]>([]);
@@ -253,7 +253,7 @@ export function ListingDropdown({
                 style={styles.item(isHighlighted)}
               >
                 <div style={styles.ticker}>
-                  {it.ticker ?? ""} <span style={{ fontWeight: 400, color: '#d1d4dc' }}>— {it.name}</span>
+                  {it.ticker ?? ""} <span style={{ fontWeight: 400, color: '#d1d4dc' }}>- {it.name}</span>
                 </div>
                 <div style={styles.meta}>
                   {it.venue_code} • {it.venue_name}

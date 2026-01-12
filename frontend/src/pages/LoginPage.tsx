@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Footer } from "../components/Footer";
 import { Notification } from "../components/Notification";
@@ -16,7 +16,7 @@ export function LoginPage() {
 
   const [isHovered, setIsHovered] = useState(false);
 
-  const from = location.state?.from?.pathname || "/me";
+  const from = location.state?.from?.pathname || "/portfolio";
 
   // If session expired, show message once
   useEffect(() => {
@@ -120,6 +120,9 @@ export function LoginPage() {
 
   return (
     <div style={pageWrapperStyle}>
+      <div style={{ position: 'absolute', top: '20px', left: '24px' }}>
+        <Link to="/" style={{ textDecoration: 'none', color: '#26cc62', fontWeight: 'bold', fontSize: '24px', letterSpacing: '1px' }}>FINBOARD</Link>
+      </div>
       <div style={containerStyle}>
         <h2 style={headerStyle}>Login to <span style={{ color: "#26cc62" }}>FINBOARD</span></h2>
 

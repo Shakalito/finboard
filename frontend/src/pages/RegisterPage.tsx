@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { register } from "../api/auth";
 import { Footer } from "../components/Footer";
 
@@ -117,6 +118,9 @@ export function RegisterPage() {
 
   return (
     <div style={pageWrapperStyle}>
+      <div style={{ position: 'absolute', top: '20px', left: '24px' }}>
+        <Link to="/" style={{ textDecoration: 'none', color: '#26cc62', fontWeight: 'bold', fontSize: '24px', letterSpacing: '1px' }}>FINBOARD</Link>
+      </div>
       <div style={containerStyle}>
         <h2 style={headerStyle}>
           Create account in <span style={{ color: '#26cc62' }}>FINBOARD</span>

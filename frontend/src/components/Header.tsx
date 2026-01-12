@@ -42,8 +42,8 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
   };
 
   const navLogoStyle: CSSProperties = {
-    fontSize: "20px",
-    fontWeight: "700",
+    fontSize: "24px",
+    fontWeight: "bold",
     color: "#26cc62",
     letterSpacing: "1px",
     display: "flex",
@@ -63,7 +63,11 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
     padding: "0 24px",
     borderBottom: "1px solid #2a2e39",
     zIndex: 900,
-    gap: "4px"
+    gap: "4px",
+    overflowX: "auto",
+    whiteSpace: "nowrap",
+    scrollbarWidth: "none", // Firefox
+    msOverflowStyle: "none", // IE/Edge
   };
 
   const subNavLinkStyle = (isActive: boolean): CSSProperties => ({
@@ -102,10 +106,7 @@ export function Header({ activeTab, refreshAction, refreshLoading = false }: Pro
           <Link to="/" style={navLogoStyle}>
             FINBOARD
           </Link>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <Link to="/portfolio" style={{ color: '#ffffff', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>TRADING</Link>
-            <Link to="/me" style={{ color: '#ffffff', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>ACCOUNT</Link>
-          </div>
+
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>

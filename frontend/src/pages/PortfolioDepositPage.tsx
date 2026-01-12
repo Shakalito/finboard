@@ -74,6 +74,7 @@ export function PortfolioDepositPage() {
     borderRadius: "6px",
     border: "1px solid #2a2e39",
     padding: "30px",
+    boxSizing: "border-box", // Prevent padding from adding to width
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
     width: "100%",
     maxWidth: "480px",

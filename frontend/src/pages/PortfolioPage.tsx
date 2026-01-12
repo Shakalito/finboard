@@ -21,12 +21,12 @@ import type { ListingSummary } from "../api/refdata";
 type Side = "BUY" | "SELL";
 
 function fmtMoney(v: number | null | undefined) {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return v.toFixed(2);
 }
 
 function fmtNum(v: number | null | undefined) {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return String(v);
 }
 
@@ -280,9 +280,10 @@ export function PortfolioPage() {
     fontSize: "13px",
   };
 
+  /* Responsive Grid Style */
   const gridContainerStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
     gap: "24px",
     marginBottom: "24px",
   };
@@ -296,6 +297,34 @@ export function PortfolioPage() {
             <h2 style={{ color: '#fff' }}>Dostęp zabroniony</h2>
             <p style={{ color: '#8d929b', marginBottom: '20px' }}>Musisz się zalogować, aby zobaczyć portfel.</p>
             <Link to="/login" style={{ color: '#26cc62', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold' }}>Zaloguj się</Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Strict loading state: Don't show partial dashboard data
+  if (loading || !account) {
+    return (
+      <>
+        <Header activeTab="dashboard" refreshAction={refreshAll} refreshLoading={loading} />
+        <div style={{ ...pageWrapperStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 60px)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div style={{
+              border: '3px solid rgba(38, 204, 98, 0.1)',
+              borderTop: '3px solid #26cc62',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <style>{`
+                          @keyframes spin {
+                              0% { transform: rotate(0deg); }
+                              100% { transform: rotate(360deg); }
+                          }
+                      `}</style>
+            <div style={{ color: '#8d929b', fontSize: '16px', fontWeight: 500 }}>Loading Dashboard...</div>
           </div>
         </div>
       </>
@@ -345,7 +374,7 @@ export function PortfolioPage() {
                   <div>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>AVAILABLE CASH</div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#d1d4dc' }}>
-                      {cash == null ? "—" : fmtMoney(cash)} <span style={{ fontSize: '12px', color: '#8d929b' }}>{account.base_currency}</span>
+                      {cash == null ? "-" : fmtMoney(cash)} <span style={{ fontSize: '12px', color: '#8d929b' }}>{account.base_currency}</span>
                     </div>
                   </div>
                   {/* Row 1, Col 2 */}
@@ -440,7 +469,7 @@ export function PortfolioPage() {
               <div style={{ textAlign: 'right', minWidth: '100px', paddingBottom: '4px' }}>
                 <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>Unit Price</div>
                 <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 700 }}>
-                  {quote?.price != null ? fmtMoney(quote.price) : "—"} <span style={{ fontSize: '10px', color: '#64748b' }}>{selectedListing?.currency ?? ""}</span>
+                  {quote?.price != null ? fmtMoney(quote.price) : "-"} <span style={{ fontSize: '10px', color: '#64748b' }}>{selectedListing?.currency ?? ""}</span>
                 </div>
               </div>
             </div>
@@ -558,7 +587,7 @@ export function PortfolioPage() {
                   {(() => {
                     const price = quote?.price ?? 0;
                     const q = Number(qty);
-                    if (q <= 0) return "—";
+                    if (q <= 0) return "-";
                     return fmtMoney(price * q);
                   })()} <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 400 }}>{selectedListing?.currency ?? "USD"}</span>
                 </div>
@@ -659,7 +688,7 @@ export function PortfolioPage() {
 
                     return (
                       <tr key={p.position_id}>
-                        <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>{p.ticker ?? "—"}</td>
+                        <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>{p.ticker ?? "-"}</td>
                         <td style={tableCellStyle}>{p.name}</td>
                         <td style={tableCellStyle}>{p.venue_code}</td>
                         <td style={{ ...tableCellStyle, textAlign: 'right' }}>{fmtNum(p.qty)}</td>
@@ -670,10 +699,10 @@ export function PortfolioPage() {
                           {pnl > 0 ? "+" : ""}{fmtMoney(pnl)}
                         </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right', color: pnlColor }}>
-                          {p.unrealized_pnl_pct == null ? "—" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
+                          {p.unrealized_pnl_pct == null ? "-" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
                         </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px' }}>
-                          {p.asof ? new Date(p.asof).toLocaleTimeString() : "—"}
+                          {p.asof ? new Date(p.asof).toLocaleTimeString() : "-"}
                         </td>
                       </tr>
                     );

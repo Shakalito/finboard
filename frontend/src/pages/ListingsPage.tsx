@@ -209,7 +209,7 @@ export function ListingsPage() {
                   return (
                     <tr key={x.id}>
                       <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>
-                        {x.ticker ?? "—"}
+                        {x.ticker ?? "-"}
                       </td>
                       <td style={tableCellStyle}>{x.name}</td>
                       <td style={tableCellStyle}>

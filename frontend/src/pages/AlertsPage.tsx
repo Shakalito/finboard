@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { deleteAlert, getMyAlerts, setAlertActive, type AlertRead } from "../api/alerts";
+import { useAlerts } from "../context/AlertsContext";
+import { deleteAlert, setAlertActive, type AlertRead } from "../api/alerts";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { Notification } from "../components/Notification";
@@ -9,55 +10,41 @@ import { Notification } from "../components/Notification";
 type Filter = "active" | "inactive" | "all";
 
 function fmtDate(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString();
 }
 
 export function AlertsPage() {
   const { token } = useAuth();
+  const { alerts, loading, error: ctxError, refresh } = useAlerts();
 
-  const [items, setItems] = useState<AlertRead[]>([]);
   const [filter, setFilter] = useState<Filter>("active");
-  const [err, setErr] = useState<string | null>(null);
+  const [localErr, setLocalErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  async function load() {
-    setErr(null);
-    setMsg(null);
-    if (!token) {
-      setErr("You must be logged in.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const activeParam = filter === "all" ? undefined : filter === "active";
-      const data = await getMyAlerts(token, activeParam);
-      setItems(data);
-    } catch (e: any) {
-      setErr(e?.message ?? "Failed to load alerts.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Combine context error with local action error
+  const err = localErr ?? ctxError;
 
-  useEffect(() => {
-    load().catch(err => console.error("Failed to load alerts", err));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, filter]);
+  // Client-side filtering
+  const items = alerts.filter(a => {
+    if (filter === 'all') return true;
+    if (filter === 'active') return a.is_active;
+    if (filter === 'inactive') return !a.is_active;
+    return true;
+  });
 
   async function onToggle(a: AlertRead) {
     if (!token) return;
-    setErr(null);
+    setLocalErr(null);
     setMsg(null);
     setActionLoadingId(a.id);
     try {
       await setAlertActive(token, a.id, !a.is_active);
       setMsg("Alert updated.");
-      await load();
+      await refresh(); // Refresh global state to reflect change
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to update alert.");
+      setLocalErr(e?.message ?? "Failed to update alert.");
     } finally {
       setActionLoadingId(null);
     }
@@ -65,15 +52,15 @@ export function AlertsPage() {
 
   async function onDelete(id: string) {
     if (!token) return;
-    setErr(null);
+    setLocalErr(null);
     setMsg(null);
     setActionLoadingId(id);
     try {
       await deleteAlert(token, id);
       setMsg("Alert deleted.");
-      await load();
+      await refresh(); // Refresh global state to remove from list
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to delete alert.");
+      setLocalErr(e?.message ?? "Failed to delete alert.");
     } finally {
       setActionLoadingId(null);
     }
@@ -182,7 +169,7 @@ export function AlertsPage() {
 
   return (
     <>
-      <Header activeTab="alerts" refreshAction={load} refreshLoading={loading} />
+      <Header activeTab="alerts" refreshAction={() => refresh()} refreshLoading={loading} />
 
       <div style={pageWrapperStyle}>
 
@@ -190,7 +177,7 @@ export function AlertsPage() {
           <Notification message={msg} type="success" onClose={() => setMsg(null)} />
         )}
         {err && (
-          <Notification message={err} type="error" onClose={() => setErr(null)} />
+          <Notification message={err} type="error" onClose={() => setLocalErr(null)} />
         )}
 
         <div style={panelStyle}>
@@ -204,7 +191,7 @@ export function AlertsPage() {
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as Filter)}
-                  disabled={loading}
+                  // disabled={loading} // Don't disable during bg polling
                   style={selectStyle}
                 >
                   <option value="active">Active</option>
@@ -219,7 +206,7 @@ export function AlertsPage() {
             </div>
           </div>
 
-          {!loading && !err && items.length === 0 && (
+          {!loading && items.length === 0 && (
             <div style={{ padding: '40px', textAlign: 'center', color: '#8d929b' }}>
               No alerts found matching this filter.
             </div>
@@ -248,7 +235,7 @@ export function AlertsPage() {
                           {fmtDate(a.created_at)}
                         </td>
                         <td style={tableCellStyle} title={a.listing_id}>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>{a.ticker ?? "—"}</span>
+                          <span style={{ fontWeight: 700, color: '#fff' }}>{a.ticker ?? "-"}</span>
                           <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: '6px' }}>
                             {a.venue_code}
                           </span>

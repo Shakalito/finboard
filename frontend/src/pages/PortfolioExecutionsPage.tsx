@@ -12,7 +12,7 @@ function fmtDate(iso: string) {
 }
 
 function fmtMoney(v: number | null | undefined) {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return v.toFixed(2);
 }
 
@@ -153,11 +153,11 @@ export function PortfolioExecutionsPage() {
                       </td>
                       <td style={{ ...tableCellStyle, color: '#d1d4dc' }}>
                         <div style={{ fontSize: '14px' }}>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>{x.ticker || "—"}</span>
-                          <span style={{ fontWeight: 400, color: '#d1d4dc' }}> — {x.instrument_name}</span>
+                          <span style={{ fontWeight: 700, color: '#fff' }}>{x.ticker || "-"}</span>
+                          <span style={{ fontWeight: 400, color: '#d1d4dc' }}> - {x.instrument_name}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: '#8d929b', marginTop: '2px' }}>
-                          {x.venue_code && x.venue_name ? `${x.venue_code} • ${x.venue_name}` : "—"}
+                          {x.venue_code && x.venue_name ? `${x.venue_code} • ${x.venue_name}` : "-"}
                         </div>
                       </td>
                       <td style={{ ...tableCellStyle, textAlign: 'right', fontWeight: 700 }}>

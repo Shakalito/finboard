@@ -8,7 +8,7 @@ import { Footer } from "../components/Footer";
 import { Notification } from "../components/Notification";
 
 function fmtMoney(v: number | null | undefined) {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return v.toFixed(2);
 }
 
@@ -182,7 +182,7 @@ export function WatchlistPage() {
                     return (
                       <tr key={x.id}>
                         <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>
-                          {x.ticker ?? "—"}
+                          {x.ticker ?? "-"}
                         </td>
                         <td style={tableCellStyle}>{x.name}</td>
                         <td style={tableCellStyle}>
@@ -201,12 +201,12 @@ export function WatchlistPage() {
                             <span style={{ color: '#ffffff' }}>{fmtMoney(q.data.price)}</span>
                           ) : null}
 
-                          {!q?.loading && !q?.error && !q?.data && <span style={{ color: '#8d929b' }}>—</span>}
+                          {!q?.loading && !q?.error && !q?.data && <span style={{ color: '#8d929b' }}>-</span>}
                         </td>
 
                         {/* TIME COLUMN */}
                         <td style={{ ...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px' }}>
-                          {q?.data?.timestamp ? new Date(q.data.timestamp).toLocaleTimeString() : "—"}
+                          {q?.data?.timestamp ? new Date(q.data.timestamp).toLocaleTimeString() : "-"}
                         </td>
 
                         {/* ACTIONS COLUMN */}

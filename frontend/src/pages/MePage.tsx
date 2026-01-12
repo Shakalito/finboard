@@ -163,7 +163,7 @@ export function MePage() {
                 </>
               )}
             </div>
-            <div style={{ fontSize: '12px', color: '#8d929b', fontFamily: 'monospace' }}>ID: {user?.id}</div>
+            <div style={{ fontSize: '12px', color: '#8d929b', fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'right', maxWidth: '120px' }}>ID: {user?.id}</div>
           </div>
 
           <div style={contentStyle}>

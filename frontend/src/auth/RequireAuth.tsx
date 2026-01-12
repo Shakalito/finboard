@@ -1,6 +1,8 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { GlobalAlerts } from "../components/GlobalAlerts";
+import { AlertsProvider } from "../context/AlertsContext";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
     const { token, userInitiatedLogout } = useAuth();
@@ -24,5 +26,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
         );
     }
 
-    return <>{children}</>;
+    return (
+        <AlertsProvider>
+            <GlobalAlerts />
+            {children}
+        </AlertsProvider>
+    );
 }
