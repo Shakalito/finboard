@@ -18,6 +18,10 @@ import { getQuotesBatch, type QuoteResponse } from "../api/marketdata";
 import { ListingDropdown } from "../components/ListingDropdown";
 import type { ListingSummary } from "../api/refdata";
 
+// --- KONFIGURACJA ---
+// Prowizja 0.25% (0.0025)
+const COMMISSION_RATE = 0.0025;
+
 type Side = "BUY" | "SELL";
 
 function fmtMoney(v: number | null | undefined) {
@@ -49,13 +53,10 @@ export function PortfolioPage() {
   const [tradeBusy, setTradeBusy] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
-
-
   async function ensurePaperAccount(): Promise<AccountRead> {
     const accs = await getMyAccounts(token!);
     const paper = accs.find((a) => a.type === "PAPER") ?? null;
     if (paper) return paper;
-
     return await createPaperAccount(token!, "USD");
   }
 
@@ -88,6 +89,7 @@ export function PortfolioPage() {
       return;
     }
     refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -95,7 +97,6 @@ export function PortfolioPage() {
       setQuote(null);
       return;
     }
-
     // Reset quote while loading
     setQuote(null);
 
@@ -104,8 +105,8 @@ export function PortfolioPage() {
         const q = res.results[selectedListing.id];
         if (q) setQuote(q);
       })
-      .catch(err => {
-        console.error("Failed to fetch quote", err);
+      .catch(error => {
+        console.error("Failed to fetch quote", error);
       });
   }, [selectedListing]);
 
@@ -156,6 +157,8 @@ export function PortfolioPage() {
 
     setTradeBusy(true);
     try {
+      // Backend powinien sam przeliczyć fee i odjąć środki,
+      // my wysyłamy tylko intencję zlecenia.
       await placeOrder(token, {
         account_id: account.id,
         listing_id: selectedListing.id,
@@ -164,6 +167,8 @@ export function PortfolioPage() {
       });
 
       setMsg(`${side} order created successfully.`);
+      // Czyścimy formularz po sukcesie (opcjonalne)
+      // setQty("1"); 
       await refreshAll();
     } catch (e: any) {
       setErr(e?.message ?? "Order error");
@@ -172,6 +177,7 @@ export function PortfolioPage() {
     }
   }
 
+  // --- STYLES ---
   const pageWrapperStyle: CSSProperties = {
     minHeight: "100vh",
     backgroundColor: "#131722",
@@ -280,13 +286,14 @@ export function PortfolioPage() {
     fontSize: "13px",
   };
 
-  /* Responsive Grid Style */
   const gridContainerStyle: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
     gap: "24px",
     marginBottom: "24px",
   };
+
+  // --- RENDER ---
 
   if (!token) {
     return (
@@ -303,7 +310,6 @@ export function PortfolioPage() {
     );
   }
 
-  // Strict loading state: Don't show partial dashboard data
   if (loading || !account) {
     return (
       <>
@@ -318,12 +324,7 @@ export function PortfolioPage() {
               height: '40px',
               animation: 'spin 1s linear infinite'
             }} />
-            <style>{`
-                          @keyframes spin {
-                              0% { transform: rotate(0deg); }
-                              100% { transform: rotate(360deg); }
-                          }
-                      `}</style>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             <div style={{ color: '#8d929b', fontSize: '16px', fontWeight: 500 }}>Loading Dashboard...</div>
           </div>
         </div>
@@ -337,23 +338,17 @@ export function PortfolioPage() {
 
       <div style={pageWrapperStyle}>
 
-        {msg && (
-          <Notification message={msg} type="success" onClose={() => setMsg(null)} />
-        )}
-        {err && (
-          <Notification message={err} type="error" onClose={() => setErr(null)} />
-        )}
+        {msg && <Notification message={msg} type="success" onClose={() => setMsg(null)} />}
+        {err && <Notification message={err} type="error" onClose={() => setErr(null)} />}
 
         <div style={gridContainerStyle}>
 
+          {/* PANEL 1: ACCOUNT */}
           <div style={panelStyle}>
             <div style={headerTitleStyle}>Account Summary</div>
 
-            {!account && <div style={{ color: '#8d929b' }}>Loading account details...</div>}
-
             {account && (
               <>
-                {/* Total Equity (Cash + Market Value of Positions) */}
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>TOTAL EQUITY</div>
@@ -368,16 +363,13 @@ export function PortfolioPage() {
                   </div>
                 </div>
 
-                {/* Grid for Cash, P/L, Return, Count */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                  {/* Row 1, Col 1 */}
                   <div>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>AVAILABLE CASH</div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#d1d4dc' }}>
                       {cash == null ? "-" : fmtMoney(cash)} <span style={{ fontSize: '12px', color: '#8d929b' }}>{account.base_currency}</span>
                     </div>
                   </div>
-                  {/* Row 1, Col 2 */}
                   <div>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>UNREALIZED P&L</div>
                     <div style={{ fontSize: '18px', fontWeight: 700 }}>
@@ -392,16 +384,13 @@ export function PortfolioPage() {
                       })()}
                     </div>
                   </div>
-                  {/* Row 2, Col 1 */}
                   <div>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>RETURN %</div>
                     <div style={{ fontSize: '18px', fontWeight: 700 }}>
                       {(() => {
                         const totalCostBasis = positions.reduce((acc, p) => acc + ((p.market_value || 0) - (p.unrealized_pnl_abs || 0)), 0);
                         const totalPnl = positions.reduce((acc, p) => acc + (p.unrealized_pnl_abs || 0), 0);
-
                         if (totalCostBasis === 0) return <span style={{ color: '#8d929b' }}>0.00%</span>;
-
                         const retPct = (totalPnl / totalCostBasis) * 100;
                         const color = retPct >= 0 ? '#26cc62' : '#ff4d4d';
                         return (
@@ -412,7 +401,6 @@ export function PortfolioPage() {
                       })()}
                     </div>
                   </div>
-                  {/* Row 2, Col 2 */}
                   <div>
                     <div style={{ fontSize: '12px', color: '#8d929b', marginBottom: '4px' }}>OPEN POSITIONS</div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#d1d4dc' }}>
@@ -450,6 +438,7 @@ export function PortfolioPage() {
             )}
           </div>
 
+          {/* PANEL 2: NEW ORDER */}
           <div style={panelStyle}>
             <div style={headerTitleStyle}>New Order</div>
 
@@ -458,7 +447,7 @@ export function PortfolioPage() {
               <button onClick={() => setSide("SELL")} disabled={tradeBusy} style={sideBtnStyle("SELL")}>SELL</button>
             </div>
 
-            {/* Row 1: Asset + Unit Price */}
+            {/* Asset + Price */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '12px' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Asset</label>
@@ -474,190 +463,135 @@ export function PortfolioPage() {
               </div>
             </div>
 
-            {/* Row 2: Qty + Total Cost */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Quantity</label>
-                <div style={{
-                  display: 'flex', alignItems: 'center',
-                  background: '#131722',
-                  border: '1px solid #434651',
-                  borderRadius: '4px',
-                  height: '40px',
-                  position: 'relative'
-                }}>
-                  <input
-                    value={qty}
-                    onChange={(e) => {
-                      setQty(e.target.value);
-                      setMsg(null);
-                      setErr(null);
-                    }}
-                    placeholder="1"
-                    type="number"
-                    min="1"
-                    style={{
-                      ...inputStyle,
-                      border: 'none',
-                      height: '100%',
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      textAlign: 'left',
-                      paddingLeft: '12px',
-                      width: '100%',
-                      appearance: 'textfield',
-                      MozAppearance: 'textfield',
-                      background: 'transparent'
-                    }}
-                  />
-                  <style>{`
-                      input::-webkit-outer-spin-button,
-                      input::-webkit-inner-spin-button {
-                        -webkit-appearance: none;
-                        margin: 0;
-                      }
-                   `}</style>
+            {/* Qty + Fee Calculation */}
+            {(() => {
+              const price = quote?.price ?? 0;
+              const q = Number(qty);
+              const rawTotal = price * q;
+              // Obliczamy fee
+              const estimatedFee = rawTotal * COMMISSION_RATE;
+              // Koszt całkowity: Przy kupnie dodajemy fee, przy sprzedaży odejmujemy od zysku
+              const totalWithFee = side === "BUY" ? rawTotal + estimatedFee : rawTotal - estimatedFee;
 
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderLeft: '1px solid #434651',
-                    height: '100%'
-                  }}>
-                    <button
-                      onClick={() => setQty(prev => {
-                        const val = Number(prev);
-                        if (Number.isNaN(val)) return "1";
-                        return (val + 1).toString();
-                      })}
-                      disabled={tradeBusy}
-                      style={{
-                        flex: 1, width: '24px',
-                        background: '#2a2e39', border: 'none', borderBottom: '1px solid #434651',
-                        color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        borderTopRightRadius: '3px'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => setQty(prev => {
-                        const val = Number(prev);
-                        if (Number.isNaN(val) || val <= 1) return "1";
-                        return Math.max(1, val - 1).toString();
-                      })}
-                      disabled={tradeBusy}
-                      style={{
-                        flex: 1, width: '24px',
-                        background: '#2a2e39', border: 'none',
-                        color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        borderBottomRightRadius: '3px'
-                      }}
-                    >
-                      ▼
-                    </button>
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '8px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '12px', color: '#8d929b', display: 'block', marginBottom: '6px' }}>Quantity</label>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', background: '#131722',
+                        border: '1px solid #434651', borderRadius: '4px', height: '40px'
+                      }}>
+                        <input
+                          value={qty}
+                          onChange={(e) => { setQty(e.target.value); setMsg(null); setErr(null); }}
+                          placeholder="1" type="number" min="1"
+                          style={{
+                            ...inputStyle, border: 'none', height: '100%', fontSize: '15px', fontWeight: 500,
+                            paddingLeft: '12px', width: '100%', background: 'transparent'
+                          }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #434651', height: '100%' }}>
+                          <button
+                            onClick={() => setQty(prev => (Number(prev) || 0) + 1 + "")}
+                            disabled={tradeBusy}
+                            style={{
+                              flex: 1, width: '24px', background: '#2a2e39', border: 'none', borderBottom: '1px solid #434651',
+                              color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', borderTopRightRadius: '3px'
+                            }}
+                          >▲</button>
+                          <button
+                            onClick={() => setQty(prev => Math.max(1, (Number(prev) || 0) - 1) + "")}
+                            disabled={tradeBusy}
+                            style={{
+                              flex: 1, width: '24px', background: '#2a2e39', border: 'none',
+                              color: '#d1d4dc', fontSize: '10px', cursor: 'pointer', borderBottomRightRadius: '3px'
+                            }}
+                          >▼</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', minWidth: '100px', paddingBottom: '4px' }}>
+                      <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>Est. Fee ({(COMMISSION_RATE * 100).toFixed(2)}%)</div>
+                      <div style={{ fontSize: '13px', color: '#ff4d4d', fontWeight: 500 }}>
+                        {selectedListing && q > 0 && price > 0
+                          ? `-${fmtMoney(estimatedFee)}`
+                          : "0.00"}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', minWidth: '100px', paddingBottom: '4px' }}>
-                <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>Total Cost</div>
-                <div style={{
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  color: (() => {
-                    const price = quote?.price ?? 0;
-                    const q = Number(qty);
 
-                    if (q <= 0) return "#d1d4dc";
-                    if (!selectedListing) return "#ffffff";
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '11px', color: '#8d929b', marginBottom: '4px' }}>
+                        Total {side === "BUY" ? "Cost" : "Proceeds"}
+                      </div>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: 700,
+                        color: (() => {
+                          if (q <= 0) return "#d1d4dc";
+                          if (!selectedListing) return "#ffffff";
+                          if (side === "BUY" && cash != null && totalWithFee > cash) return "#ff4d4d";
+                          if (side === "SELL") {
+                            const pos = positions.find(p => p.listing_id === selectedListing.id);
+                            if (q > (pos?.qty ?? 0)) return "#ff4d4d";
+                          }
+                          return "#ffffff";
+                        })()
+                      }}>
+                        {q > 0 && price > 0 ? fmtMoney(totalWithFee) : "-"}
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 400, marginLeft: '4px' }}>
+                          {selectedListing?.currency ?? "USD"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                    const total = price * q;
+                  <button
+                    onClick={() => {
+                      if (!account) { setErr("No account available."); return; }
+                      if (!selectedListing) { setErr("Please select a listing first."); return; }
+                      const valQ = Number(qty);
+                      if (!Number.isFinite(valQ) || valQ <= 0) { setErr("Quantity must be greater than 0."); return; }
 
-                    if (side === "BUY") {
-                      if (cash != null && total > cash) return "#ff4d4d";
-                    } else {
-                      const pos = positions.find(p => p.listing_id === selectedListing.id);
-                      const owned = pos?.qty ?? 0;
-                      if (q > owned) return "#ff4d4d";
-                    }
+                      // WALIDACJA FEE
+                      if (side === "BUY") {
+                        if (cash != null && totalWithFee > cash) {
+                          setErr(`Insufficient funds. Cost: ${fmtMoney(totalWithFee)} (incl. fee), Cash: ${fmtMoney(cash)}.`);
+                          return;
+                        }
+                      } else {
+                        const pos = positions.find(p => p.listing_id === selectedListing.id);
+                        const owned = pos?.qty ?? 0;
+                        if (valQ > owned) {
+                          setErr(`Insufficient shares. You have ${owned} but are trying to sell ${valQ}.`);
+                          return;
+                        }
+                      }
 
-                    return "#ffffff";
-                  })()
-                }}>
-                  {(() => {
-                    const price = quote?.price ?? 0;
-                    const q = Number(qty);
-                    if (q <= 0) return "-";
-                    return fmtMoney(price * q);
-                  })()} <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 400 }}>{selectedListing?.currency ?? "USD"}</span>
-                </div>
-              </div>
-            </div>
+                      onTradeClick();
+                    }}
+                    disabled={tradeBusy}
+                    style={{
+                      ...btnStyle(side === "BUY" ? 'green' : 'red', hoveredBtn === 'trade'),
+                      width: '100%',
+                      opacity: tradeBusy ? 0.6 : 1
+                    }}
+                    onMouseEnter={() => setHoveredBtn('trade')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                  >
+                    {tradeBusy ? "PROCESSING..." : (side === "BUY" ? "PLACE BUY ORDER" : "PLACE SELL ORDER")}
+                  </button>
+                </>
+              );
+            })()}
 
-            <button
-              onClick={() => {
-                // Explicit validation on click to show error messages
-                if (!account) { setErr("No account available."); return; }
-                if (!selectedListing) { setErr("Please select a listing first."); return; }
-
-                const q = Number(qty);
-                if (!Number.isFinite(q) || q <= 0) {
-                  setErr("Quantity must be greater than 0.");
-                  return;
-                }
-
-                const price = quote?.price ?? 0;
-                const total = price * q;
-
-                if (side === "BUY") {
-                  if (cash != null && total > cash) {
-                    setErr(`Insufficient funds. You need ${fmtMoney(total)} but only have ${fmtMoney(cash)}.`);
-                    return;
-                  }
-                } else {
-                  const pos = positions.find(p => p.listing_id === selectedListing.id);
-                  const owned = pos?.qty ?? 0;
-                  if (q > owned) {
-                    setErr(`Insufficient shares. You have ${owned} but are trying to sell ${q}.`);
-                    return;
-                  }
-                }
-
-                onTradeClick();
-              }}
-              disabled={tradeBusy}
-              style={{
-                ...btnStyle(side === "BUY" ? 'green' : 'red', hoveredBtn === 'trade'),
-                opacity: (() => {
-                  if (tradeBusy) return 0.5;
-                  // We keep it fully opaque (or slightly dimmed?) to encourage clicking so they see the error
-                  // checking validity just for visual cue, but not disabling
-                  if (!selectedListing) return 0.5;
-
-                  const q = Number(qty);
-                  if (!Number.isFinite(q) || q <= 0) return 1; // Let them click to see "invalid qty"
-
-                  if (quote?.price) {
-                    const total = quote.price * q;
-                    if (side === "BUY" && cash != null && total > cash) return 0.5; // Visual hint something is wrong
-                    if (side === "SELL") {
-                      const pos = positions.find(p => p.listing_id === selectedListing?.id);
-                      const owned = pos?.qty ?? 0;
-                      if (q > owned) return 0.5;
-                    }
-                  }
-                  return 1;
-                })(),
-                marginTop: '12px'
-              }}
-              onMouseEnter={() => setHoveredBtn('trade')}
-              onMouseLeave={() => setHoveredBtn(null)}
-            >
-              {tradeBusy ? "PROCESSING..." : (side === "BUY" ? "PLACE BUY ORDER" : "PLACE SELL ORDER")}
-            </button>
           </div>
         </div>
 
+        {/* OPEN POSITIONS TABLE */}
         <div style={panelStyle}>
           <div style={headerTitleStyle}>Open Positions</div>
 
@@ -678,14 +612,12 @@ export function PortfolioPage() {
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Value</th>
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>P&L</th>
                     <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Net %</th>
-                    <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {positions.map((p) => {
                     const pnl = p.unrealized_pnl_abs || 0;
                     const pnlColor = pnl >= 0 ? "#26cc62" : "#ff4d4d";
-
                     return (
                       <tr key={p.position_id}>
                         <td style={{ ...tableCellStyle, fontWeight: 700, color: '#fff' }}>{p.ticker ?? "-"}</td>
@@ -700,9 +632,6 @@ export function PortfolioPage() {
                         </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right', color: pnlColor }}>
                           {p.unrealized_pnl_pct == null ? "-" : (p.unrealized_pnl_pct * 100).toFixed(2) + "%"}
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'right', color: '#8d929b', fontSize: '12px' }}>
-                          {p.asof ? new Date(p.asof).toLocaleTimeString() : "-"}
                         </td>
                       </tr>
                     );
