@@ -1,65 +1,226 @@
-# FinBoard - Financial Market Analysis Dashboard
+# FinBoard
 
-A financial dashboard application for tracking stock quotes, analyzing historical data, and virtual investing, powered by free stock market APIs.
+Microservice-oriented financial analytics platform for market monitoring, portfolio simulation and quantitative analysis.
 
----
+![Dashboard Preview](docs/assets/dashboard-preview.gif)
 
-##  Getting Started ( ͡• ͜ʖ ͡• )
+FinBoard is a full-stack financial platform designed around service boundaries inspired by microservice architecture.
 
-This guide assumes you have the following installed: **Docker Desktop**, **Node.js**, and **Python 3.10+**.
+The system provides:
+- market data ingestion,
+- portfolio simulation,
+- alerting,
+- watchlists,
+- historical OHLCV analysis,
+- backtesting capabilities,
+- modular financial domain services.
 
-### Environment Setup
-* Clone the repository to your local machine.
-* In the root folder, copy the `.env.example` file and create a new file named `.env`. Fill it with your required API keys.
+The backend is currently deployed as a modular monolith, while preserving explicit service boundaries, schema-level isolation and a migration path toward independently deployable microservices.
 
-### Database (Docker)
-Ensure **Docker Desktop** is running. Open a terminal in the project root directory (`/finboard`) and run:
+## Features
+
+- JWT authentication & session handling
+- Market data ingestion pipeline
+- Historical OHLCV processing
+- Portfolio & PnL tracking
+- Watchlists
+- Alert engine
+- Backtesting module design
+- Modular service-oriented backend
+- PostgreSQL schema isolation
+- Dockerized infrastructure
+
+## Architecture
+
+FinBoard follows a modular microservice-oriented architecture.
+
+Each domain service owns:
+- its own schema,
+- its own business logic,
+- isolated database access layer,
+- dedicated API routes.
+
+Current MVP deployment uses:
+- shared PostgreSQL instance,
+- single FastAPI runtime,
+- Docker-based infrastructure.
+
+This architecture was intentionally designed to allow future extraction into fully independent microservices with minimal refactoring.
+
+### Services
+
+| Service | Responsibility |
+|---|---|
+| AUTH-SERVICE | Authentication, JWT, sessions, 2FA |
+| REFDATA-SERVICE | Instruments & exchange metadata |
+| MARKETDATA-SERVICE | OHLCV ingestion and quotes |
+| PORTFOLIO-SERVICE | Orders, positions, ledger |
+| WATCHLIST-SERVICE | User watchlists |
+| ALERTS-SERVICE | Alert evaluation engine |
+| BACKTEST-SERVICE | Strategy backtesting |
+| NOTIFY-SERVICE | Notifications |
+
+```
+Frontend (React/Vite)
+        |
+        v
+ FastAPI Gateway
+        |
+ ------------------------------------------------
+ | AUTH | MARKETDATA | PORTFOLIO | ALERTS | ...
+ ------------------------------------------------
+        |
+    PostgreSQL
+```
+
+## Tech Stack
+
+### Backend
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Pydantic
+- JWT Authentication
+
+### Frontend
+- React
+- Vite
+- TypeScript
+- TailwindCSS
+
+### Infrastructure
+- Docker
+- Docker Compose
+
+### Market Data
+- Yahoo Finance
+- Finnhub API
+
+## Quick Start
+
+### Prerequisites
+
+- Docker Desktop
+- Node.js 18+
+- Python 3.10+
+- PowerShell
+
+### 1. Clone repository
 
 ```powershell
-docker compose down
+git clone https://github.com/Shakalito/finboard.git
+cd finboard
+```
+
+### 2. Configure environment
+```
+copy .env.example .env
+```
+
+Fill required environment variables, including database settings and external market data API keys.
+
+### 3. Start database
+```
+docker compose down   
 docker compose up -d
 ```
 
-## Data Initialization (seeding)
-Open a second, PowerShell terminal in the backend directory (`/finboard/backend`)
-
-### Activate Virtual Environment
-```powershell
-.\.venv\Scripts\Activate
+### 4. Create and activate Python virtual environment
+```
+python -m venv .venv   
+.\.venv\Scripts\Activate   
+python -m pip install --upgrade pip   
 ```
 
-go to main directory with `cd ..`
-### Run script
-```powershell
+Install backend dependencies according to the project dependency file:
+```
+pip install -r requirements.txt
+```
+
+If backend dependencies are stored inside `/backend`, use:
+```
+pip install -r backend\requirements.txt
+```
+### 5. Seed market data
+```
 .\seed_OHLCV.ps1
 ```
-
-## Backend
-Go back to `/finboard/backend` with PowerShell terminal
-
-### Run Development Server
-```powershell
-uvicorn src.main:app --reload
+### 6. Run backend
 ```
-The API will be available at: http://localhost:8000
+cd backend   
+uvicorn src.main:app --reload   
+```
 
+API: http://localhost:8000
 
-## Frontend
-Open third terminal in the `/frontend directory`
-### Install Dependencies & run application
-```powershell
+Swagger UI: http://localhost:8000/docs
+
+### 7. Run frontend
+
+Open another terminal:
+```
+cd frontend
 npm install
-```
-```powershell
 npm run dev
 ```
 
-The dashboard will be available at: http://localhost:5173
+Frontend: http://localhost:5173
+
+```mermaid
+flowchart TD
+    Frontend[React / Vite Frontend] --> API[FastAPI Runtime]
+
+    API --> Auth[AUTH-SERVICE]
+    API --> RefData[REFDATA-SERVICE]
+    API --> MarketData[MARKETDATA-SERVICE]
+    API --> Portfolio[PORTFOLIO-SERVICE]
+    API --> Watchlist[WATCHLIST-SERVICE]
+    API --> Alerts[ALERTS-SERVICE]
+    API --> Notify[NOTIFY-SERVICE]
+
+    Auth --> DB[(PostgreSQL)]
+    RefData --> DB
+    MarketData --> DB
+    Portfolio --> DB
+    Watchlist --> DB
+    Alerts --> DB
+    Notify --> DB
+```
+
+## Documentation
+
+- [System Architecture](docs/architecture/system-overview.md)
+- [Service Boundaries](docs/architecture/service-boundaries.md)
+- [Database Design](docs/database/database-design.md)
+- [Local Development](docs/deployment/local-development.md)
+
+### Backend Services
+
+- [AUTH-SERVICE](docs/backend/auth-service.md)
+- [REFDATA-SERVICE](docs/backend/refdata-service.md)
+- [MARKETDATA-SERVICE](docs/backend/marketdata-service.md)
+- [PORTFOLIO-SERVICE](docs/backend/portfolio-service.md)
+- [WATCHLIST-SERVICE](docs/backend/watchlist-service.md)
+- [ALERTS-SERVICE](docs/backend/alerts-service.md)
+- [NOTIFY-SERVICE](docs/backend/notify-service.md)
+
+### Frontend
+
+- [Frontend Architecture](docs/frontend/frontend-architecture.md)
 
 
+## Current MVP Limitations
 
+- Market data ingestion currently relies on free-tier providers
+- Historical OHLCV seeding is manual
+- Services are deployed within a shared runtime
+- Real-time streaming is not yet implemented
 
----
-##### Known limitations
-- Historical OHLCV data is seeded manually using Yahoo Finance
-- Real-time quotes are fetched from Finnhub (free tier)
+## Roadmap
+
+- Redis market cache
+- Kafka/RabbitMQ event bus
+- Independent service deployment
+- gRPC service communication
+- Real-time websocket streaming
+- Kubernetes deployment
